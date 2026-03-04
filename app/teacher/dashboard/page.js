@@ -6,6 +6,18 @@ import { supabase } from '@/lib/supabase'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
+const ZONE_CATEGORIES = [
+  'Playground',
+  'Front yard',
+  'Garden',
+  'Sports field',
+  'Parking lot',
+  'Corridor',
+  'Building perimeter',
+  'Courtyard',
+  'Other',
+]
+
 export default function TeacherDashboard() {
   const router = useRouter()
   const [teacher, setTeacher] = useState(null)
@@ -15,7 +27,9 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true)
   const [addingZone, setAddingZone] = useState(false)
   const [newZoneLabel, setNewZoneLabel] = useState('')
+  const [newZoneCategory, setNewZoneCategory] = useState('')
   const [newZoneDesc, setNewZoneDesc] = useState('')
+  const [newZoneGroup, setNewZoneGroup] = useState('')
   const [copied, setCopied] = useState('')
 
   useEffect(() => { loadData() }, [])
@@ -43,7 +57,6 @@ export default function TeacherDashboard() {
 
     setZones(zonesData || [])
 
-    // Get tree counts per zone
     if (zonesData?.length) {
       const { data: treesData } = await supabase
         .from('trees')
@@ -70,12 +83,16 @@ export default function TeacherDashboard() {
     const { error } = await supabase.from('zones').insert({
       school_id: school.id,
       label: newZoneLabel,
+      category: newZoneCategory || null,
       description: newZoneDesc.trim() || null,
+      group_number: newZoneGroup ? parseInt(newZoneGroup) : null,
     })
     if (!error) {
       setAddingZone(false)
       setNewZoneLabel('')
+      setNewZoneCategory('')
       setNewZoneDesc('')
+      setNewZoneGroup('')
       loadData()
     }
   }
@@ -177,7 +194,7 @@ export default function TeacherDashboard() {
             <h3 className="font-semibold text-forest-800 mb-4">New Zone</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Zone Letter</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Zone Letter *</label>
                 <select
                   value={newZoneLabel}
                   onChange={e => setNewZoneLabel(e.target.value)}
@@ -190,12 +207,38 @@ export default function TeacherDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Description (optional)</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                <select
+                  value={newZoneCategory}
+                  onChange={e => setNewZoneCategory(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                >
+                  <option value="">Select category…</option>
+                  {ZONE_CATEGORIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Description <span className="font-normal text-gray-400">(optional)</span></label>
                 <input
                   type="text"
                   value={newZoneDesc}
                   onChange={e => setNewZoneDesc(e.target.value)}
-                  placeholder="e.g. North playground"
+                  placeholder="e.g. North side near the gate"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Assigned Group <span className="font-normal text-gray-400">(optional)</span></label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newZoneGroup}
+                  onChange={e => setNewZoneGroup(e.target.value)}
+                  placeholder="e.g. 1"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
                 />
               </div>
@@ -224,22 +267,32 @@ export default function TeacherDashboard() {
               <div key={zone.id} className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg">
+                    <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
                       {zone.label}
                     </div>
                     <div>
-                      <p className="font-semibold text-forest-800">Zone {zone.label}</p>
-                      {zone.description && <p className="text-gray-400 text-xs">{zone.description}</p>}
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-forest-800">Zone {zone.label}</p>
+                        {zone.category && (
+                          <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">
+                            {zone.category}
+                          </span>
+                        )}
+                      </div>
+                      {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
+                      {zone.group_number && (
+                        <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>
+                      )}
                     </div>
                   </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0 ${
                     zone.completed ? 'bg-forest-100 text-forest-700' : 'bg-gray-100 text-gray-400'
                   }`}>
                     {zone.completed ? 'Complete' : 'In progress'}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                   <span className="text-sm text-gray-500">
                     🌳 {treeCounts[zone.id] || 0} trees
                   </span>
@@ -259,10 +312,10 @@ export default function TeacherDashboard() {
         <div className="mt-8 bg-forest-50 rounded-xl p-5 border border-forest-100">
           <h3 className="font-semibold text-forest-800 mb-2">How to use with students</h3>
           <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-            <li>Create a zone for each group of students</li>
+            <li>Create a zone for each area of your campus</li>
+            <li>Assign each zone to a student group</li>
             <li>Share the zone code with each group (e.g. <span className="font-mono bg-white px-1 rounded">{school?.id}-A</span>)</li>
             <li>Students enter the code in the field app to start collecting data</li>
-            <li>Trees appear here as students submit them</li>
           </ol>
         </div>
       </div>
