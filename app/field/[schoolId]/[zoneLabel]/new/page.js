@@ -216,11 +216,50 @@ export default function NewTreePage() {
 
         {!inaccessible && (
           <>
-            {/* Species */}
+            {/* 1. Photo first */}
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="font-semibold text-forest-800 mb-1">📷 Photo *</p>
+              <p className="text-xs text-gray-400 mb-3">Take a photo of the full tree — we'll identify the species automatically</p>
+              <label className="cursor-pointer block">
+                {photoPreview ? (
+                  <div className="relative rounded-xl overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoPreview} alt="Tree" className="w-full h-52 object-cover" />
+                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">
+                      Tap to change
+                    </span>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl h-36 flex flex-col items-center justify-center text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
+                    <span className="text-4xl mb-2">📷</span>
+                    <span className="text-sm font-medium">Take a photo</span>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhoto}
+                  className="hidden"
+                />
+              </label>
+
+              {identifying && (
+                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2 mt-3">
+                  <svg className="animate-spin h-4 w-4 text-forest-600 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Identifying species with PlantNet…
+                </div>
+              )}
+            </div>
+
+            {/* 2. Species — with PlantNet suggestions right below photo */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
               <p className="font-semibold text-forest-800">Species</p>
 
-              {/* PlantNet suggestions */}
               {!identifying && suggestions.length > 0 && (
                 <div>
                   <p className="text-xs text-gray-500 mb-2">🌿 PlantNet suggestions — tap to use:</p>
@@ -278,7 +317,7 @@ export default function NewTreePage() {
               </div>
             </div>
 
-            {/* Height */}
+            {/* 3. Height */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <label className="block font-semibold text-forest-800 mb-1">Height *</label>
               <p className="text-xs text-gray-400 mb-3">Total tree height in meters</p>
@@ -296,7 +335,7 @@ export default function NewTreePage() {
               </div>
             </div>
 
-            {/* Diameter / Stems */}
+            {/* 4. Diameter / Stems */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="font-semibold text-forest-800 mb-1">Trunk Diameter *</p>
               <p className="text-xs text-gray-400 mb-3">
@@ -372,7 +411,7 @@ export default function NewTreePage() {
               )}
             </div>
 
-            {/* Health */}
+            {/* 5. Health */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="font-semibold text-forest-800 mb-3">Health Status *</p>
               <div className="grid grid-cols-3 gap-3">
@@ -396,57 +435,6 @@ export default function NewTreePage() {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Photo */}
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="font-semibold text-forest-800 mb-1">Photo *</p>
-              <p className="text-xs text-gray-400 mb-3">Take a photo of the full tree</p>
-              <label className="cursor-pointer block">
-                {photoPreview ? (
-                  <div className="relative rounded-xl overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photoPreview} alt="Tree" className="w-full h-52 object-cover" />
-                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">
-                      Tap to change
-                    </span>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
-                    <span className="text-3xl mb-1">📷</span>
-                    <span className="text-sm font-medium">Take a photo</span>
-                  </div>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhoto}
-                  className="hidden"
-                />
-              </label>
-
-              {/* PlantNet status — shown right below photo */}
-              {identifying && (
-                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2 mt-3">
-                  <svg className="animate-spin h-4 w-4 text-forest-600 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Identifying species with PlantNet…
-                </div>
-              )}
-              {!identifying && suggestions.length > 0 && (
-                <div className="mt-3 bg-forest-50 rounded-lg px-3 py-2 text-xs text-forest-600 font-medium">
-                  ✅ Species identified — scroll up to see suggestions
-                </div>
-              )}
-              {!identifying && photoFile && suggestions.length === 0 && speciesCommon === '' && (
-                <div className="mt-3 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-400">
-                  Could not identify species — please enter it manually above
-                </div>
-              )}
             </div>
           </>
         )}
