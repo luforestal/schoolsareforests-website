@@ -225,16 +225,6 @@ export default function NewTreePage() {
               <p className="font-semibold text-forest-800">Species</p>
 
               {/* PlantNet suggestions */}
-              {identifying && (
-                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
-                  <svg className="animate-spin h-4 w-4 text-forest-600" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Identifying species…
-                </div>
-              )}
-
               {!identifying && suggestions.length > 0 && (
                 <div>
                   <p className="text-xs text-gray-500 mb-2">🌿 PlantNet suggestions — tap to use:</p>
@@ -440,6 +430,27 @@ export default function NewTreePage() {
                   className="hidden"
                 />
               </label>
+
+              {/* PlantNet status — shown right below photo */}
+              {identifying && (
+                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2 mt-3">
+                  <svg className="animate-spin h-4 w-4 text-forest-600 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Identifying species with PlantNet…
+                </div>
+              )}
+              {!identifying && suggestions.length > 0 && (
+                <div className="mt-3 bg-forest-50 rounded-lg px-3 py-2 text-xs text-forest-600 font-medium">
+                  ✅ Species identified — scroll up to see suggestions
+                </div>
+              )}
+              {!identifying && photoFile && suggestions.length === 0 && speciesCommon === '' && (
+                <div className="mt-3 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-400">
+                  Could not identify species — please enter it manually above
+                </div>
+              )}
             </div>
           </>
         )}
