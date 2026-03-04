@@ -64,36 +64,37 @@ export default function NewTreePage() {
       .single().then(({ data }) => setZone(data))
   }, [schoolId, zoneLabel, router])
 
-  const handlePhoto = async (index, e) => {
+  const handlePhoto = (index, e) => {
     const file = e.target.files[0]
     if (!file) return
-
     const newPhotos = [...photos]
     const newPreviews = [...previews]
     newPhotos[index] = file
     newPreviews[index] = URL.createObjectURL(file)
     setPhotos(newPhotos)
     setPreviews(newPreviews)
+    setSuggestions([]) // clear previous suggestions when photos change
+  }
 
-    // Trigger PlantNet with all available photos when first photo is added
-    if (index === 0) {
-      setSuggestions([])
-      setIdentifying(true)
-      try {
-        const formData = new FormData()
-        newPhotos.filter(Boolean).forEach(f => formData.append('images', f))
-        const res = await fetch('/api/identify', { method: 'POST', body: formData })
-        const data = await res.json()
-        if (res.ok && data.results) {
-          setSuggestions(data.results.slice(0, 3).map(r => ({
-            score: Math.round(r.score * 100),
-            scientific: r.species.scientificNameWithoutAuthor,
-            common: r.species.commonNames?.[0] || '',
-          })))
-        }
-      } catch (_) {}
-      finally { setIdentifying(false) }
-    }
+  const handleIdentify = async () => {
+    const available = photos.filter(Boolean)
+    if (!available.length) return
+    setSuggestions([])
+    setIdentifying(true)
+    try {
+      const formData = new FormData()
+      available.forEach(f => formData.append('images', f))
+      const res = await fetch('/api/identify', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (res.ok && data.results) {
+        setSuggestions(data.results.slice(0, 3).map(r => ({
+          score: Math.round(r.score * 100),
+          scientific: r.species.scientificNameWithoutAuthor,
+          common: r.species.commonNames?.[0] || '',
+        })))
+      }
+    } catch (_) {}
+    finally { setIdentifying(false) }
   }
 
   const addStem = () => {
@@ -258,14 +259,21 @@ export default function NewTreePage() {
                 </div>
               ))}
 
-              {identifying && (
-                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
-                  <svg className="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Identifying species with PlantNet…
-                </div>
+              {photos.some(Boolean) && (
+                identifying ? (
+                  <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
+                    <svg className="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Identifying with PlantNet… ({photos.filter(Boolean).length} photo{photos.filter(Boolean).length > 1 ? 's' : ''})
+                  </div>
+                ) : (
+                  <button type="button" onClick={handleIdentify}
+                    className="w-full bg-forest-50 border border-forest-200 text-forest-700 font-semibold py-2.5 rounded-lg hover:bg-forest-100 transition-colors text-sm">
+                    🌿 Identify species with PlantNet ({photos.filter(Boolean).length} photo{photos.filter(Boolean).length > 1 ? 's' : ''})
+                  </button>
+                )
               )}
             </div>
 
