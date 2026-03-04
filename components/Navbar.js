@@ -26,7 +26,6 @@ function LangSwitcher() {
   }, [])
 
   const switchLang = (lang) => {
-    // 1. Update cookies for persistence across reloads
     const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
     document.cookie = `googtrans=; path=/; ${expire}`
     document.cookie = `googtrans=; path=/; domain=${location.hostname}; ${expire}`
@@ -35,17 +34,8 @@ function LangSwitcher() {
       document.cookie = `googtrans=/en/${lang}; path=/`
       document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
     }
-
-    // 2. Try the combo element for instant switch (no reload needed)
-    const select = document.querySelector('.goog-te-combo')
-    if (select) {
-      select.value = lang === 'en' ? '' : lang
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-      setActive(lang)
-    } else {
-      // Widget not ready yet — reload so the cookie takes effect
-      window.location.href = window.location.href
-    }
+    // replace() forces a fresh navigation instead of a cached reload
+    window.location.replace(window.location.pathname + window.location.search)
   }
 
   return (
