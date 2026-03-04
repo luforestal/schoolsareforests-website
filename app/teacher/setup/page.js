@@ -4,23 +4,39 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+const STEPS = ['About You', 'Your School', 'Your Class']
+
 export default function TeacherSetupPage() {
   const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [user, setUser] = useState(null)
   const [schools, setSchools] = useState([])
-  const [name, setName] = useState('')
-  const [schoolId, setSchoolId] = useState('')
-  const [newSchoolName, setNewSchoolName] = useState('')
-  const [newSchoolCity, setNewSchoolCity] = useState('')
-  const [newSchoolCountry, setNewSchoolCountry] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Step 1 — Teacher
+  const [name, setName] = useState('')
+  const [subject, setSubject] = useState('')
+
+  // Step 2 — School
+  const [schoolId, setSchoolId] = useState('')
+  const [newSchoolName, setNewSchoolName] = useState('')
+  const [newSchoolAddress, setNewSchoolAddress] = useState('')
+  const [newSchoolCity, setNewSchoolCity] = useState('')
+  const [newSchoolCountry, setNewSchoolCountry] = useState('')
+  const [newSchoolPhone, setNewSchoolPhone] = useState('')
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
+
+  // Step 3 — Class
+  const [studentCount, setStudentCount] = useState('')
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/teacher'); return }
+      setUser(user)
 
-      // If teacher record already exists, go straight to dashboard
       const { data: existing } = await supabase
         .from('teachers').select('school_id').eq('id', user.id).single()
       if (existing?.school_id) { router.push('/teacher/dashboard'); return }
@@ -31,132 +47,291 @@ export default function TeacherSetupPage() {
     init()
   }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  const recommendedZones = () => {
+    const n = parseInt(studentCount)
+    if (!n || n < 1) return null
+    return Math.min(Math.max(Math.ceil(n / 5), 2), 10)
+  }
+
+  const handleFinish = async () => {
     setLoading(true)
     setError('')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/teacher'); return }
-
     let finalSchoolId = schoolId
+    let logoUrl = null
 
-    // If teacher is adding a new school
+    // Create new school if needed
     if (schoolId === '__new__') {
       if (!newSchoolName.trim() || !newSchoolCity.trim() || !newSchoolCountry.trim()) {
-        setError('Please fill in all school fields.')
+        setError('Please fill in school name, city and country.')
         setLoading(false)
         return
       }
-      const newId = newSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10)
+
+      const newId = newSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12)
+
+      // Upload logo if provided
+      if (logoFile) {
+        const ext = logoFile.name.split('.').pop()
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(`${newId}.${ext}`, logoFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('logos').getPublicUrl(`${newId}.${ext}`)
+          logoUrl = urlData.publicUrl
+        }
+      }
+
       const { error: schoolError } = await supabase.from('schools').insert({
         id: newId,
         name: newSchoolName.trim(),
+        address: newSchoolAddress.trim() || null,
         location: `${newSchoolCity.trim()}, ${newSchoolCountry.trim()}`,
         country: newSchoolCountry.trim(),
+        phone: newSchoolPhone.trim() || null,
+        logo_url: logoUrl,
         trees_count: 0,
       })
       if (schoolError) { setError(schoolError.message); setLoading(false); return }
       finalSchoolId = newId
     }
 
+    // Create teacher record
     const { error: teacherError } = await supabase.from('teachers').insert({
       id: user.id,
       school_id: finalSchoolId,
       name: name.trim(),
       email: user.email,
+      subject: subject.trim() || null,
+      student_count: parseInt(studentCount) || null,
     })
 
     if (teacherError) { setError(teacherError.message); setLoading(false); return }
     router.push('/teacher/dashboard')
   }
 
+  const nextStep = () => {
+    setError('')
+    if (step === 1) {
+      if (!name.trim()) { setError('Please enter your name.'); return }
+    }
+    if (step === 2) {
+      if (!schoolId) { setError('Please select or register your school.'); return }
+    }
+    if (step === 3) {
+      handleFinish()
+      return
+    }
+    setStep(s => s + 1)
+  }
+
   return (
-    <div className="min-h-screen bg-forest-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-3">🌳</div>
-          <h1 className="text-2xl font-bold text-forest-800">Set Up Your Profile</h1>
-          <p className="text-gray-500 text-sm mt-1">Tell us about yourself and your school</p>
+    <div className="min-h-screen bg-forest-50 flex items-center justify-center px-4 py-10">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+
+        {/* Progress bar */}
+        <div className="px-8 pt-8 pb-4">
+          <div className="flex items-center gap-2 mb-6">
+            {STEPS.map((label, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                  step > i + 1 ? 'bg-forest-600 text-white' :
+                  step === i + 1 ? 'bg-forest-700 text-white' :
+                  'bg-gray-100 text-gray-400'
+                }`}>
+                  {step > i + 1 ? '✓' : i + 1}
+                </div>
+                <span className={`text-xs font-medium ${step === i + 1 ? 'text-forest-700' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Ms. García"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Your School</label>
-            <select
-              required
-              value={schoolId}
-              onChange={e => setSchoolId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
-            >
-              <option value="">Select your school…</option>
-              {schools.map(s => (
-                <option key={s.id} value={s.id}>{s.name} — {s.location}</option>
-              ))}
-              <option value="__new__">My school is not listed</option>
-            </select>
-          </div>
-
-          {schoolId === '__new__' && (
-            <div className="space-y-4 bg-forest-50 rounded-xl p-4 border border-forest-100">
-              <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide">New School Details</p>
+        <div className="px-8 pb-8">
+          {/* ── Step 1: About You ── */}
+          {step === 1 && (
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">About You</h2>
+                <p className="text-gray-400 text-sm">Tell us a bit about yourself</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                 <input
                   type="text"
-                  value={newSchoolName}
-                  onChange={e => setNewSchoolName(e.target.value)}
-                  placeholder="Lincoln Elementary School"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ms. García"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject / Grade</label>
                 <input
                   type="text"
-                  value={newSchoolCity}
-                  onChange={e => setNewSchoolCity(e.target.value)}
-                  placeholder="Berlin"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  placeholder="e.g. 4th Grade Science"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                <input
-                  type="text"
-                  value={newSchoolCountry}
-                  onChange={e => setNewSchoolCountry(e.target.value)}
-                  placeholder="Germany"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
-                />
+              <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-500">
+                Signed in as <span className="font-medium text-gray-700">{user?.email}</span>
               </div>
             </div>
           )}
 
-          {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-4 py-2">{error}</p>
+          {/* ── Step 2: Your School ── */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">Your School</h2>
+                <p className="text-gray-400 text-sm">Find your school or register a new one</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select School *</label>
+                <select
+                  value={schoolId}
+                  onChange={e => setSchoolId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                >
+                  <option value="">Choose your school…</option>
+                  {schools.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} — {s.location}</option>
+                  ))}
+                  <option value="__new__">My school is not listed</option>
+                </select>
+              </div>
+
+              {schoolId === '__new__' && (
+                <div className="space-y-4 bg-forest-50 rounded-xl p-4 border border-forest-100">
+                  <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide">Register New School</p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">School Name *</label>
+                    <input type="text" value={newSchoolName} onChange={e => setNewSchoolName(e.target.value)}
+                      placeholder="Lincoln Elementary School"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input type="text" value={newSchoolAddress} onChange={e => setNewSchoolAddress(e.target.value)}
+                      placeholder="123 Oak Street"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                      <input type="text" value={newSchoolCity} onChange={e => setNewSchoolCity(e.target.value)}
+                        placeholder="Berlin"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                      <input type="text" value={newSchoolCountry} onChange={e => setNewSchoolCountry(e.target.value)}
+                        placeholder="Germany"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input type="tel" value={newSchoolPhone} onChange={e => setNewSchoolPhone(e.target.value)}
+                      placeholder="+49 30 12345678"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
+                    <div className="flex items-center gap-4">
+                      {logoPreview && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoPreview} alt="Logo preview" className="h-14 w-14 object-contain rounded-lg border border-gray-200 bg-white p-1" />
+                      )}
+                      <label className="cursor-pointer bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                        {logoFile ? logoFile.name : 'Choose image…'}
+                        <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-forest-700 text-white font-semibold py-3 rounded-lg hover:bg-forest-600 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Saving…' : 'Continue to Dashboard →'}
-          </button>
-        </form>
+          {/* ── Step 3: Your Class ── */}
+          {step === 3 && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">Your Class</h2>
+                <p className="text-gray-400 text-sm">Help us recommend the right setup for your students</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={studentCount}
+                  onChange={e => setStudentCount(e.target.value)}
+                  placeholder="e.g. 25"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                />
+              </div>
+
+              {recommendedZones() && (
+                <div className="bg-forest-50 border border-forest-100 rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="text-2xl">🗺️</div>
+                    <div>
+                      <p className="font-semibold text-forest-800">
+                        We recommend <span className="text-forest-600">{recommendedZones()} zones</span>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        ~{Math.ceil(parseInt(studentCount) / recommendedZones())} students per group
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    You can always add or remove zones later from your dashboard.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-4 py-2 mt-4">{error}</p>
+          )}
+
+          {/* Navigation */}
+          <div className="flex gap-3 mt-8">
+            {step > 1 && (
+              <button
+                onClick={() => { setStep(s => s - 1); setError('') }}
+                className="flex-1 border border-gray-200 text-gray-500 font-semibold py-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={nextStep}
+              disabled={loading}
+              className="flex-1 bg-forest-700 text-white font-semibold py-3 rounded-lg hover:bg-forest-600 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Saving…' : step === 3 ? 'Go to Dashboard →' : 'Next →'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
