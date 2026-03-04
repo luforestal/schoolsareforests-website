@@ -10,13 +10,25 @@ export default function TeacherSetupPage() {
   const [name, setName] = useState('')
   const [schoolId, setSchoolId] = useState('')
   const [newSchoolName, setNewSchoolName] = useState('')
+  const [newSchoolCity, setNewSchoolCity] = useState('')
+  const [newSchoolCountry, setNewSchoolCountry] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase.from('schools').select('id, name, location').then(({ data }) => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/teacher'); return }
+
+      // If teacher record already exists, go straight to dashboard
+      const { data: existing } = await supabase
+        .from('teachers').select('school_id').eq('id', user.id).single()
+      if (existing?.school_id) { router.push('/teacher/dashboard'); return }
+
+      const { data } = await supabase.from('schools').select('id, name, location')
       if (data) setSchools(data)
-    })
+    }
+    init()
   }, [])
 
   const handleSubmit = async (e) => {
@@ -31,8 +43,8 @@ export default function TeacherSetupPage() {
 
     // If teacher is adding a new school
     if (schoolId === '__new__') {
-      if (!newSchoolName.trim()) {
-        setError('Please enter your school name.')
+      if (!newSchoolName.trim() || !newSchoolCity.trim() || !newSchoolCountry.trim()) {
+        setError('Please fill in all school fields.')
         setLoading(false)
         return
       }
@@ -40,8 +52,8 @@ export default function TeacherSetupPage() {
       const { error: schoolError } = await supabase.from('schools').insert({
         id: newId,
         name: newSchoolName.trim(),
-        location: '',
-        country: '',
+        location: `${newSchoolCity.trim()}, ${newSchoolCountry.trim()}`,
+        country: newSchoolCountry.trim(),
         trees_count: 0,
       })
       if (schoolError) { setError(schoolError.message); setLoading(false); return }
@@ -98,15 +110,38 @@ export default function TeacherSetupPage() {
           </div>
 
           {schoolId === '__new__' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-              <input
-                type="text"
-                value={newSchoolName}
-                onChange={e => setNewSchoolName(e.target.value)}
-                placeholder="Lincoln Elementary School"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-              />
+            <div className="space-y-4 bg-forest-50 rounded-xl p-4 border border-forest-100">
+              <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide">New School Details</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+                <input
+                  type="text"
+                  value={newSchoolName}
+                  onChange={e => setNewSchoolName(e.target.value)}
+                  placeholder="Lincoln Elementary School"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input
+                  type="text"
+                  value={newSchoolCity}
+                  onChange={e => setNewSchoolCity(e.target.value)}
+                  placeholder="Berlin"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                <input
+                  type="text"
+                  value={newSchoolCountry}
+                  onChange={e => setNewSchoolCountry(e.target.value)}
+                  placeholder="Germany"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                />
+              </div>
             </div>
           )}
 
