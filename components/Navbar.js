@@ -20,34 +20,27 @@ const LANGS = [
 function LangSwitcher() {
   const [active, setActive] = useState('en')
 
-  // Apply language via the combo element, retrying until GT is ready
-  const applyLang = (lang) => {
-    let attempts = 40
-    const tryApply = () => {
-      const select = document.querySelector('.goog-te-combo')
-      if (select && select.options.length > 1) {
-        select.value = lang === 'en' ? '' : lang
-        select.dispatchEvent(new Event('change', { bubbles: true }))
-      } else if (attempts-- > 0) {
-        setTimeout(tryApply, 250)
-      }
-    }
-    tryApply()
-  }
-
   useEffect(() => {
-    const saved = localStorage.getItem('saf_lang') || 'en'
+    const saved = sessionStorage.getItem('saf_lang') || 'en'
     setActive(saved)
-    if (saved !== 'en') {
-      // Give GT time to initialize, then apply saved language
-      setTimeout(() => applyLang(saved), 1200)
-    }
   }, [])
 
   const switchLang = (lang) => {
-    localStorage.setItem('saf_lang', lang)
+    sessionStorage.setItem('saf_lang', lang)
     setActive(lang)
-    applyLang(lang)
+
+    const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
+    // Clear existing cookies
+    document.cookie = `googtrans=; path=/; ${expire}`
+    document.cookie = `googtrans=; path=/; domain=.${location.hostname}; ${expire}`
+
+    if (lang !== 'en') {
+      // Set translation cookie for ES or DE
+      document.cookie = `googtrans=/en/${lang}; path=/`
+      document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
+    }
+
+    window.location.reload()
   }
 
   return (

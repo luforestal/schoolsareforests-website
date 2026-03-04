@@ -35,9 +35,10 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{
             __html: `
               function googleTranslateElementInit() {
+                if (sessionStorage.getItem('saf_lang') === 'en') return;
                 new google.translate.TranslateElement({
                   pageLanguage: 'en',
-                  includedLanguages: 'en,es,de',
+                  includedLanguages: 'es,de',
                   layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                   autoDisplay: false
                 }, 'google_translate_element');
