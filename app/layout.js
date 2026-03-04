@@ -1,8 +1,7 @@
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+import ConditionalLayout from '@/components/ConditionalLayout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,12 +20,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-white text-gray-900`}>
-        <Navbar />
-        <main className="min-h-screen">
+      <body className={`${inter.className} bg-white text-gray-900`} suppressHydrationWarning>
+        <ConditionalLayout>
           {children}
-        </main>
-        <Footer />
+        </ConditionalLayout>
 
         {/* Google Translate – loads after page is interactive */}
         <Script
