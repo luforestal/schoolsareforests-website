@@ -160,12 +160,6 @@ export default function TeacherSetupPage() {
     let logoUrl = null
 
     if (schoolId === '__new__') {
-      if (!newSchoolName.trim() || !newSchoolCity.trim()) {
-        setError('Please fill in school name and city.')
-        setLoading(false)
-        return
-      }
-
       const newId = newSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12)
 
       if (logoFile) {
@@ -213,6 +207,10 @@ export default function TeacherSetupPage() {
     if (step === 2) {
       if (!selectedCountry) { setError('Please select your country.'); return }
       if (!schoolId) { setError('Please select or register your school.'); return }
+      if (schoolId === '__new__') {
+        if (!newSchoolName.trim()) { setError('Please enter the school name.'); return }
+        if (!newSchoolCity.trim()) { setError('Please enter the city.'); return }
+      }
     }
     if (step === 3) { handleFinish(); return }
     setStep(s => s + 1)
@@ -259,13 +257,13 @@ export default function TeacherSetupPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-gray-400 font-normal">(optional)</span></label>
                   <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
                     placeholder="e.g. Science"
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade <span className="text-gray-400 font-normal">(optional)</span></label>
                   <input type="text" value={grade} onChange={e => setGrade(e.target.value)}
                     placeholder="e.g. 4th"
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
@@ -327,7 +325,7 @@ export default function TeacherSetupPage() {
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address <span className="text-gray-400 font-normal">(optional)</span></label>
                     <input type="text" value={newSchoolAddress} onChange={e => setNewSchoolAddress(e.target.value)}
                       placeholder="123 Oak Street"
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
@@ -340,7 +338,7 @@ export default function TeacherSetupPage() {
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code <span className="text-gray-400 font-normal">(optional)</span></label>
                       <input type="text" value={newSchoolPostal} onChange={e => setNewSchoolPostal(e.target.value)}
                         placeholder="10115"
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
@@ -348,14 +346,14 @@ export default function TeacherSetupPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone <span className="text-gray-400 font-normal">(country code pre-filled)</span>
+                      Phone <span className="text-gray-400 font-normal">(optional, code pre-filled)</span>
                     </label>
                     <input type="tel" value={newSchoolPhone} onChange={e => setNewSchoolPhone(e.target.value)}
                       placeholder={`${dialCode} 30 12345678`}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">School Logo <span className="text-gray-400 font-normal">(optional)</span></label>
                     <div className="flex items-center gap-4">
                       {logoPreview && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -380,7 +378,7 @@ export default function TeacherSetupPage() {
                 <p className="text-gray-400 text-sm">Help us recommend the right setup for your students</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students <span className="text-gray-400 font-normal">(optional)</span></label>
                 <input type="number" min="1" max="200" value={studentCount}
                   onChange={e => setStudentCount(e.target.value)}
                   placeholder="e.g. 25"
