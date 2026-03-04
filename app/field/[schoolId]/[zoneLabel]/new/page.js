@@ -4,10 +4,16 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+const PHOTO_LABELS = [
+  { label: 'Full tree', hint: 'Step back and capture the whole tree' },
+  { label: 'Bark / trunk', hint: 'Close-up of the bark texture' },
+  { label: 'Leaves / detail', hint: 'Close-up of leaves, flowers or fruit' },
+]
+
 export default function NewTreePage() {
   const { schoolId, zoneLabel } = useParams()
   const router = useRouter()
-  const fileRef = useRef()
+  const fileRefs = [useRef(), useRef(), useRef()]
   const [zone, setZone] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -19,6 +25,7 @@ export default function NewTreePage() {
   // Species
   const [speciesCommon, setSpeciesCommon] = useState('')
   const [speciesScientific, setSpeciesScientific] = useState('')
+  const [needsId, setNeedsId] = useState(false)
 
   // Height
   const [height, setHeight] = useState('')
@@ -30,11 +37,11 @@ export default function NewTreePage() {
   // Health
   const [health, setHealth] = useState('')
 
-  // Photo
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
+  // Photos (up to 3)
+  const [photos, setPhotos] = useState([null, null, null])
+  const [previews, setPreviews] = useState([null, null, null])
 
-  // PlantNet identification
+  // PlantNet
   const [identifying, setIdentifying] = useState(false)
   const [suggestions, setSuggestions] = useState([])
 
@@ -52,58 +59,56 @@ export default function NewTreePage() {
       )
     }
 
-    const load = async () => {
-      const { data: zoneData } = await supabase
-        .from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel).single()
-      setZone(zoneData)
-    }
-    load()
+    supabase.from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
+      .single().then(({ data }) => setZone(data))
   }, [schoolId, zoneLabel, router])
+
+  const handlePhoto = async (index, e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const newPhotos = [...photos]
+    const newPreviews = [...previews]
+    newPhotos[index] = file
+    newPreviews[index] = URL.createObjectURL(file)
+    setPhotos(newPhotos)
+    setPreviews(newPreviews)
+
+    // Trigger PlantNet with all available photos when first photo is added
+    if (index === 0) {
+      setSuggestions([])
+      setIdentifying(true)
+      try {
+        const formData = new FormData()
+        newPhotos.filter(Boolean).forEach(f => formData.append('images', f))
+        const res = await fetch('/api/identify', { method: 'POST', body: formData })
+        const data = await res.json()
+        if (res.ok && data.results) {
+          setSuggestions(data.results.slice(0, 3).map(r => ({
+            score: Math.round(r.score * 100),
+            scientific: r.species.scientificNameWithoutAuthor,
+            common: r.species.commonNames?.[0] || '',
+          })))
+        }
+      } catch (_) {}
+      finally { setIdentifying(false) }
+    }
+  }
 
   const addStem = () => {
     if (stems.length < 5) setStems([...stems, { diameter: '', measureHeight: '1.3' }])
   }
-
   const removeStem = (i) => setStems(stems.filter((_, idx) => idx !== i))
-
   const updateStem = (i, field, value) =>
     setStems(stems.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
-
-  const handlePhoto = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
-    setSuggestions([])
-
-    // Identify with PlantNet
-    setIdentifying(true)
-    try {
-      const formData = new FormData()
-      formData.append('image', file)
-      const res = await fetch('/api/identify', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (res.ok && data.results) {
-        const top3 = data.results.slice(0, 3).map(r => ({
-          score: Math.round(r.score * 100),
-          scientific: r.species.scientificNameWithoutAuthor,
-          common: r.species.commonNames?.[0] || '',
-        }))
-        setSuggestions(top3)
-      }
-    } catch (err) {
-      // silently fail — user can type manually
-    } finally {
-      setIdentifying(false)
-    }
-  }
 
   const validate = () => {
     if (inaccessible) {
       if (!inaccessibleNote.trim()) return 'Please describe why the tree is inaccessible.'
       return null
     }
-    if (!speciesCommon.trim()) return 'Please enter the common species name.'
+    if (!photos[0]) return 'Please take at least the first photo (full tree).'
+    if (!needsId && !speciesCommon.trim()) return 'Please enter the common species name, or tap "I don\'t know the species".'
     if (!height) return 'Please enter the tree height.'
     const activeStems = isMultistem ? stems : [stems[0]]
     for (let i = 0; i < activeStems.length; i++) {
@@ -111,7 +116,6 @@ export default function NewTreePage() {
       if (isMultistem && !activeStems[i].measureHeight) return `Please enter the measurement height for stem ${i + 1}.`
     }
     if (!health) return 'Please select the health status.'
-    if (!photoFile) return 'Please take a photo of the tree.'
     return null
   }
 
@@ -123,37 +127,49 @@ export default function NewTreePage() {
 
     const recordedBy = sessionStorage.getItem('saf_student_name')
 
-    let photoUrl = null
-    if (photoFile && !inaccessible) {
-      const ext = photoFile.name.split('.').pop()
-      const filename = `${zone.id}-${Date.now()}.${ext}`
-      const { error: uploadErr } = await supabase.storage
-        .from('tree-photos').upload(filename, photoFile)
+    // Upload photos
+    const uploadedUrls = []
+    for (const photo of photos.filter(Boolean)) {
+      const ext = photo.name.split('.').pop()
+      const filename = `${zone.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('tree-photos').upload(filename, photo)
       if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from('tree-photos').getPublicUrl(filename)
-        photoUrl = urlData.publicUrl
+        const { data } = supabase.storage.from('tree-photos').getPublicUrl(filename)
+        uploadedUrls.push(data.publicUrl)
       }
     }
 
-    const { data: treeData, error: treeErr } = await supabase
-      .from('trees').insert({
-        school_id: schoolId,
-        zone_id: zone.id,
-        recorded_by: recordedBy,
-        species_common: inaccessible ? null : speciesCommon.trim(),
-        species_scientific: inaccessible ? null : (speciesScientific.trim() || null),
-        height_m: inaccessible ? null : parseFloat(height),
-        is_multistem: inaccessible ? false : isMultistem,
-        health_status: inaccessible ? null : health,
-        photo_url: photoUrl,
-        inaccessible,
-        inaccessible_note: inaccessible ? inaccessibleNote.trim() : null,
-        lat: coords?.lat || null,
-        lng: coords?.lng || null,
-      }).select().single()
+    const { data: treeData, error: treeErr } = await supabase.from('trees').insert({
+      school_id: schoolId,
+      zone_id: zone.id,
+      recorded_by: recordedBy,
+      species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
+      species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
+      height_m: inaccessible ? null : parseFloat(height),
+      is_multistem: inaccessible ? false : isMultistem,
+      health_status: inaccessible ? null : health,
+      photo_url: uploadedUrls[0] || null,
+      inaccessible,
+      inaccessible_note: inaccessible ? inaccessibleNote.trim() : null,
+      needs_identification: !inaccessible && needsId,
+      lat: coords?.lat || null,
+      lng: coords?.lng || null,
+    }).select().single()
 
     if (treeErr) { setError(treeErr.message); setSubmitting(false); return }
 
+    // Save additional photos to tree_photos table
+    if (treeData && uploadedUrls.length > 1) {
+      await supabase.from('tree_photos').insert(
+        uploadedUrls.slice(1).map((url, i) => ({
+          tree_id: treeData.id,
+          photo_url: url,
+          photo_order: i + 2,
+        }))
+      )
+    }
+
+    // Save stems
     if (!inaccessible && treeData) {
       const activeStems = isMultistem ? stems : [{ ...stems[0], measureHeight: '1.3' }]
       await supabase.from('tree_stems').insert(
@@ -181,20 +197,14 @@ export default function NewTreePage() {
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-            {error}
-          </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">{error}</div>
         )}
 
         {/* Inaccessible toggle */}
         <div className={`rounded-xl p-4 border-2 transition-colors ${inaccessible ? 'border-amber-300 bg-amber-50' : 'border-gray-100 bg-white shadow-sm'}`}>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={inaccessible}
-              onChange={e => setInaccessible(e.target.checked)}
-              className="w-5 h-5 accent-amber-500 flex-shrink-0"
-            />
+            <input type="checkbox" checked={inaccessible} onChange={e => setInaccessible(e.target.checked)}
+              className="w-5 h-5 accent-amber-500 flex-shrink-0" />
             <div>
               <p className="font-semibold text-gray-700">This tree cannot be measured safely</p>
               <p className="text-xs text-gray-400">Your teacher will be notified</p>
@@ -203,51 +213,51 @@ export default function NewTreePage() {
           {inaccessible && (
             <div className="mt-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">Why is it inaccessible? *</label>
-              <input
-                type="text"
-                value={inaccessibleNote}
-                onChange={e => setInaccessibleNote(e.target.value)}
+              <input type="text" value={inaccessibleNote} onChange={e => setInaccessibleNote(e.target.value)}
                 placeholder="e.g. Too high up, wasp nest nearby, behind locked gate"
-                className="w-full border border-amber-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-              />
+                className="w-full border border-amber-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
             </div>
           )}
         </div>
 
         {!inaccessible && (
           <>
-            {/* 1. Photo first */}
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="font-semibold text-forest-800 mb-1">📷 Photo *</p>
-              <p className="text-xs text-gray-400 mb-3">Take a photo of the full tree — we'll identify the species automatically</p>
-              <label className="cursor-pointer block">
-                {photoPreview ? (
-                  <div className="relative rounded-xl overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photoPreview} alt="Tree" className="w-full h-52 object-cover" />
-                    <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">
-                      Tap to change
-                    </span>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl h-36 flex flex-col items-center justify-center text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
-                    <span className="text-4xl mb-2">📷</span>
-                    <span className="text-sm font-medium">Take a photo</span>
-                  </div>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhoto}
-                  className="hidden"
-                />
-              </label>
+            {/* 1. Photos */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+              <div>
+                <p className="font-semibold text-forest-800">📷 Photos *</p>
+                <p className="text-xs text-gray-400 mt-0.5">Take up to 3 photos — the more the better for species ID</p>
+              </div>
+
+              {PHOTO_LABELS.map((pl, i) => (
+                <div key={i}>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    {i === 0 ? `${pl.label} *` : `${pl.label} `}
+                    {i > 0 && <span className="text-gray-400 font-normal">(optional but helpful)</span>}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-2">{pl.hint}</p>
+                  <label className="cursor-pointer block">
+                    {previews[i] ? (
+                      <div className="relative rounded-xl overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={previews[i]} alt="" className="w-full h-36 object-cover" />
+                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">Tap to change</span>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl h-24 flex items-center justify-center gap-2 text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
+                        <span className="text-2xl">📷</span>
+                        <span className="text-sm">{pl.label}</span>
+                      </div>
+                    )}
+                    <input ref={fileRefs[i]} type="file" accept="image/*" capture="environment"
+                      onChange={e => handlePhoto(i, e)} className="hidden" />
+                  </label>
+                </div>
+              ))}
 
               {identifying && (
-                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2 mt-3">
-                  <svg className="animate-spin h-4 w-4 text-forest-600 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
+                  <svg className="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                   </svg>
@@ -256,7 +266,7 @@ export default function NewTreePage() {
               )}
             </div>
 
-            {/* 2. Species — with PlantNet suggestions right below photo */}
+            {/* 2. Species */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
               <p className="font-semibold text-forest-800">Species</p>
 
@@ -265,12 +275,9 @@ export default function NewTreePage() {
                   <p className="text-xs text-gray-500 mb-2">🌿 PlantNet suggestions — tap to use:</p>
                   <div className="space-y-2">
                     {suggestions.map((s, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { setSpeciesCommon(s.common || s.scientific); setSpeciesScientific(s.scientific); setSuggestions([]) }}
-                        className="w-full text-left border border-forest-200 bg-forest-50 rounded-lg px-3 py-2.5 hover:bg-forest-100 transition-colors"
-                      >
+                      <button key={i} type="button"
+                        onClick={() => { setSpeciesCommon(s.common || s.scientific); setSpeciesScientific(s.scientific); setSuggestions([]); setNeedsId(false) }}
+                        className="w-full text-left border border-forest-200 bg-forest-50 rounded-lg px-3 py-2.5 hover:bg-forest-100 transition-colors">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold text-forest-800">{s.common || s.scientific}</p>
@@ -282,39 +289,41 @@ export default function NewTreePage() {
                         </div>
                       </button>
                     ))}
-                    <button
-                      type="button"
-                      onClick={() => setSuggestions([])}
-                      className="text-xs text-gray-400 hover:text-gray-600 pt-1"
-                    >
-                      None of these — I'll type it manually
-                    </button>
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Common name *</label>
-                <input
-                  type="text"
-                  value={speciesCommon}
-                  onChange={e => setSpeciesCommon(e.target.value)}
-                  placeholder="e.g. Oak, Pine, Mango"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Scientific name <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={speciesScientific}
-                  onChange={e => setSpeciesScientific(e.target.value)}
-                  placeholder="e.g. Quercus robur"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 italic"
-                />
-              </div>
+              {!needsId ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Common name *</label>
+                    <input type="text" value={speciesCommon} onChange={e => setSpeciesCommon(e.target.value)}
+                      placeholder="e.g. Oak, Pine, Mango"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Scientific name <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input type="text" value={speciesScientific} onChange={e => setSpeciesScientific(e.target.value)}
+                      placeholder="e.g. Quercus robur"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 italic" />
+                  </div>
+                  <button type="button" onClick={() => { setNeedsId(true); setSpeciesCommon(''); setSpeciesScientific(''); setSuggestions([]) }}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-lg py-3 text-sm text-gray-400 hover:border-amber-300 hover:text-amber-600 transition-colors">
+                    ❓ I don't know the species — request help
+                  </button>
+                </>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="font-semibold text-amber-700 text-sm">❓ Identification requested</p>
+                  <p className="text-amber-600 text-xs mt-1">Your teacher or an expert will identify this tree from your photos.</p>
+                  <button type="button" onClick={() => setNeedsId(false)}
+                    className="mt-3 text-xs text-amber-600 underline hover:text-amber-700">
+                    I know the species — enter it manually
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* 3. Height */}
@@ -322,92 +331,53 @@ export default function NewTreePage() {
               <label className="block font-semibold text-forest-800 mb-1">Height *</label>
               <p className="text-xs text-gray-400 mb-3">Total tree height in meters</p>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={height}
-                  onChange={e => setHeight(e.target.value)}
+                <input type="number" step="0.1" min="0" value={height} onChange={e => setHeight(e.target.value)}
                   placeholder="e.g. 8.5"
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                />
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                 <span className="text-gray-500 font-medium">m</span>
               </div>
             </div>
 
-            {/* 4. Diameter / Stems */}
+            {/* 4. Diameter */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="font-semibold text-forest-800 mb-1">Trunk Diameter *</p>
               <p className="text-xs text-gray-400 mb-3">
                 {isMultistem ? 'Diameter and measurement height for each stem' : 'Diameter at breast height (DBH) — measured at 1.3m from the ground'}
               </p>
-
               <label className="flex items-center gap-2 mb-4 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isMultistem}
-                  onChange={e => {
-                    setIsMultistem(e.target.checked)
-                    if (!e.target.checked) setStems([stems[0] || { diameter: '', measureHeight: '1.3' }])
-                  }}
-                  className="w-4 h-4 accent-forest-600"
-                />
+                <input type="checkbox" checked={isMultistem}
+                  onChange={e => { setIsMultistem(e.target.checked); if (!e.target.checked) setStems([stems[0] || { diameter: '', measureHeight: '1.3' }]) }}
+                  className="w-4 h-4 accent-forest-600" />
                 <span className="text-sm text-gray-600">Multi-stem tree</span>
               </label>
-
               <div className="space-y-3">
                 {(isMultistem ? stems : [stems[0]]).map((stem, i) => (
                   <div key={i} className="flex items-end gap-2">
-                    {isMultistem && (
-                      <span className="text-xs font-bold text-forest-600 w-12 flex-shrink-0 pb-3">Stem {i + 1}</span>
-                    )}
+                    {isMultistem && <span className="text-xs font-bold text-forest-600 w-12 flex-shrink-0 pb-3">Stem {i + 1}</span>}
                     <div className="flex-1">
                       <label className="block text-xs text-gray-500 mb-1">Diameter (cm)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={stem.diameter}
-                        onChange={e => updateStem(i, 'diameter', e.target.value)}
-                        placeholder="e.g. 25.4"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                      />
+                      <input type="number" step="0.1" min="0" value={stem.diameter}
+                        onChange={e => updateStem(i, 'diameter', e.target.value)} placeholder="e.g. 25.4"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                     </div>
                     {isMultistem && (
                       <div className="flex-1">
                         <label className="block text-xs text-gray-500 mb-1">Measured at (m)</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={stem.measureHeight}
-                          onChange={e => updateStem(i, 'measureHeight', e.target.value)}
-                          placeholder="1.3"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                        />
+                        <input type="number" step="0.1" min="0" value={stem.measureHeight}
+                          onChange={e => updateStem(i, 'measureHeight', e.target.value)} placeholder="1.3"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                       </div>
                     )}
                     {isMultistem && stems.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeStem(i)}
-                        className="text-gray-300 hover:text-red-400 pb-2.5 flex-shrink-0 text-lg"
-                      >
-                        ✕
-                      </button>
+                      <button type="button" onClick={() => removeStem(i)}
+                        className="text-gray-300 hover:text-red-400 pb-2.5 flex-shrink-0 text-lg">✕</button>
                     )}
                   </div>
                 ))}
               </div>
-
               {isMultistem && stems.length < 5 && (
-                <button
-                  type="button"
-                  onClick={addStem}
-                  className="mt-3 text-forest-600 text-sm font-medium hover:text-forest-700"
-                >
-                  + Add stem
-                </button>
+                <button type="button" onClick={addStem}
+                  className="mt-3 text-forest-600 text-sm font-medium hover:text-forest-700">+ Add stem</button>
               )}
             </div>
 
@@ -420,16 +390,10 @@ export default function NewTreePage() {
                   { value: 'fair', label: 'Fair', emoji: '🟡' },
                   { value: 'poor', label: 'Poor', emoji: '🔴' },
                 ].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setHealth(opt.value)}
+                  <button key={opt.value} type="button" onClick={() => setHealth(opt.value)}
                     className={`py-3 rounded-xl border-2 font-semibold text-sm transition-colors flex flex-col items-center gap-1 ${
-                      health === opt.value
-                        ? 'border-forest-600 bg-forest-50 text-forest-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
+                      health === opt.value ? 'border-forest-600 bg-forest-50 text-forest-700' : 'border-gray-200 text-gray-500'
+                    }`}>
                     <span className="text-xl">{opt.emoji}</span>
                     {opt.label}
                   </button>
@@ -439,14 +403,10 @@ export default function NewTreePage() {
           </>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-lg"
-        >
-          {submitting ? 'Saving…' : inaccessible ? '⚠️ Report Inaccessible Tree' : '✓ Save Tree'}
+        <button onClick={handleSubmit} disabled={submitting}
+          className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-lg">
+          {submitting ? 'Saving…' : inaccessible ? '⚠️ Report Inaccessible Tree' : needsId ? '💾 Save Tree (ID needed)' : '✓ Save Tree'}
         </button>
-
         <div className="pb-8" />
       </div>
     </div>

@@ -1,11 +1,14 @@
 export async function POST(request) {
   try {
     const formData = await request.formData()
-    const image = formData.get('image')
+    const images = formData.getAll('images')
 
     const plantNetForm = new FormData()
-    plantNetForm.append('images', image)
-    plantNetForm.append('organs', 'auto')
+    const organs = ['auto', 'bark', 'leaf']
+    images.forEach((img, i) => {
+      plantNetForm.append('images', img)
+      plantNetForm.append('organs', organs[i] || 'auto')
+    })
 
     const res = await fetch(
       `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}&lang=en&include-related-images=false`,
