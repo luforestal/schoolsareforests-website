@@ -118,6 +118,28 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
+
+        {/* School Info Panel */}
+        <div className="bg-white rounded-xl shadow-sm p-5 mb-8 flex items-center gap-5">
+          {school?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={school.logo_url} alt="School logo" className="h-16 w-16 object-contain rounded-lg border border-gray-100 flex-shrink-0" />
+          ) : (
+            <div className="h-16 w-16 rounded-lg bg-forest-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">🏫</span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-forest-800 text-lg leading-tight">{school?.name}</h2>
+            {school?.location && <p className="text-gray-500 text-sm mt-0.5">{school.location}</p>}
+            {school?.address && <p className="text-gray-400 text-xs mt-0.5">{school.address}{school?.postal_code ? `, ${school.postal_code}` : ''}</p>}
+          </div>
+          <div className="text-right flex-shrink-0">
+            {school?.phone && <p className="text-sm text-gray-500">📞 {school.phone}</p>}
+            <p className="text-xs text-gray-400 mt-1 font-mono">ID: {school?.id}</p>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-10">
           <div className="bg-white rounded-xl p-5 text-center shadow-sm">
