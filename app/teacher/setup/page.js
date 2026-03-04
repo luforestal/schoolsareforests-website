@@ -17,6 +17,7 @@ export default function TeacherSetupPage() {
   // Step 1 — Teacher
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
+  const [grade, setGrade] = useState('')
 
   // Step 2 — School
   const [schoolId, setSchoolId] = useState('')
@@ -110,6 +111,7 @@ export default function TeacherSetupPage() {
       name: name.trim(),
       email: user.email,
       subject: subject.trim() || null,
+      grade: grade.trim() || null,
       student_count: parseInt(studentCount) || null,
     })
 
@@ -174,15 +176,27 @@ export default function TeacherSetupPage() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subject / Grade</label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={e => setSubject(e.target.value)}
-                  placeholder="e.g. 4th Grade Science"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={e => setSubject(e.target.value)}
+                    placeholder="e.g. Science"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                  <input
+                    type="text"
+                    value={grade}
+                    onChange={e => setGrade(e.target.value)}
+                    placeholder="e.g. 4th"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
               </div>
               <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-500">
                 Signed in as <span className="font-medium text-gray-700">{user?.email}</span>
