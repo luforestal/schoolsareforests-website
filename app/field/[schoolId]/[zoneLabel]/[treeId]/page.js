@@ -13,12 +13,19 @@ export default function TreeDetailPage() {
   const [extraPhotos, setExtraPhotos] = useState([])
   const [loading, setLoading] = useState(true)
   const [treeNumber, setTreeNumber] = useState(null)
+  const [saving, setSaving] = useState(false)
 
-  // Edit species state
+  // Edit species
   const [editingSpecies, setEditingSpecies] = useState(false)
   const [editCommon, setEditCommon] = useState('')
   const [editScientific, setEditScientific] = useState('')
-  const [saving, setSaving] = useState(false)
+
+  // Edit measurements
+  const [editingMeasurements, setEditingMeasurements] = useState(false)
+  const [editHeight, setEditHeight] = useState('')
+  const [editCrown, setEditCrown] = useState('')
+  const [editHealth, setEditHealth] = useState('')
+  const [editStems, setEditStems] = useState([])
 
   useEffect(() => {
     const load = async () => {
@@ -28,21 +35,21 @@ export default function TreeDetailPage() {
       setTree(treeData)
       setEditCommon(treeData.species_common || '')
       setEditScientific(treeData.species_scientific || '')
+      setEditHeight(treeData.height_m?.toString() || '')
+      setEditCrown(treeData.crown_diameter_m?.toString() || '')
+      setEditHealth(treeData.health_status || '')
 
-      // Get stems
       const { data: stemsData } = await supabase
         .from('tree_stems').select('*').eq('tree_id', treeId).order('stem_number')
       setStems(stemsData || [])
+      setEditStems(stemsData?.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() })) || [])
 
-      // Get extra photos
       const { data: photosData } = await supabase
         .from('tree_photos').select('*').eq('tree_id', treeId).order('photo_order')
       setExtraPhotos(photosData || [])
 
-      // Get tree number within zone
       const { data: zoneTrees } = await supabase
-        .from('trees').select('id').eq('zone_id', treeData.zone_id)
-        .eq('inaccessible', false).order('id')
+        .from('trees').select('id').eq('zone_id', treeData.zone_id).eq('inaccessible', false).order('id')
       const idx = zoneTrees?.findIndex(t => t.id === treeId)
       if (idx !== undefined && idx >= 0) setTreeNumber(idx + 1)
 
@@ -64,6 +71,38 @@ export default function TreeDetailPage() {
     setSaving(false)
   }
 
+  const handleSaveMeasurements = async () => {
+    setSaving(true)
+    await supabase.from('trees').update({
+      height_m: parseFloat(editHeight) || null,
+      crown_diameter_m: parseFloat(editCrown) || null,
+      health_status: editHealth || null,
+    }).eq('id', treeId)
+
+    // Update stems
+    for (const stem of editStems) {
+      await supabase.from('tree_stems').update({
+        diameter_cm: parseFloat(stem.diameter_cm) || null,
+        measurement_height_m: parseFloat(stem.measurement_height_m) || null,
+      }).eq('id', stem.id)
+    }
+
+    setTree(t => ({ ...t, height_m: parseFloat(editHeight) || null, crown_diameter_m: parseFloat(editCrown) || null, health_status: editHealth || null }))
+    setStems(editStems.map(s => ({ ...s, diameter_cm: parseFloat(s.diameter_cm), measurement_height_m: parseFloat(s.measurement_height_m) })))
+    setEditingMeasurements(false)
+    setSaving(false)
+  }
+
+  const recaptureGPS = () => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const lat = pos.coords.latitude
+      const lng = pos.coords.longitude
+      await supabase.from('trees').update({ lat, lng }).eq('id', treeId)
+      setTree(t => ({ ...t, lat, lng }))
+    }, () => alert('Could not get GPS location.'))
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
       <p className="text-forest-400">Loading…</p>
@@ -74,8 +113,6 @@ export default function TreeDetailPage() {
     tree.photo_url && { url: tree.photo_url, label: 'Full tree' },
     ...extraPhotos.map((p, i) => ({ url: p.photo_url, label: ['Bark / trunk', 'Leaves / detail'][i] || `Photo ${i + 2}` })),
   ].filter(Boolean)
-
-  const healthLabel = tree.health_status === 'good' ? '🟢 Good' : tree.health_status === 'fair' ? '🟡 Fair' : tree.health_status === 'poor' ? '🔴 Poor' : null
 
   return (
     <div className="min-h-screen bg-forest-50">
@@ -104,8 +141,7 @@ export default function TreeDetailPage() {
             {allPhotos.map((p, i) => (
               <div key={i} className="flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt={p.label}
-                  className="h-48 w-36 object-cover rounded-xl shadow-sm" />
+                <img src={p.url} alt={p.label} className="h-48 w-36 object-cover rounded-xl shadow-sm" />
                 <p className="text-xs text-gray-400 text-center mt-1">{p.label}</p>
               </div>
             ))}
@@ -130,7 +166,6 @@ export default function TreeDetailPage() {
                   className="text-xs text-forest-600 hover:text-forest-700 font-medium">Edit</button>
               )}
             </div>
-
             {editingSpecies ? (
               <div className="space-y-3">
                 <div>
@@ -158,9 +193,7 @@ export default function TreeDetailPage() {
               <div>
                 <p className="text-amber-600 text-sm font-medium">❓ Species not yet identified</p>
                 <button onClick={() => setEditingSpecies(true)}
-                  className="mt-2 text-sm text-forest-600 font-medium hover:text-forest-700">
-                  + Enter species now
-                </button>
+                  className="mt-2 text-sm text-forest-600 font-medium hover:text-forest-700">+ Enter species now</button>
               </div>
             ) : (
               <div>
@@ -174,46 +207,115 @@ export default function TreeDetailPage() {
         {/* Measurements */}
         {!tree.inaccessible && (
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className="font-semibold text-forest-800 mb-3">Measurements</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Height</span>
-                <span className="font-medium text-forest-800">{tree.height_m ? `${tree.height_m} m` : '—'}</span>
-              </div>
-              {stems.length > 0 && stems.map((stem, i) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span className="text-gray-500">
-                    {tree.is_multistem ? `Stem ${stem.stem_number} diameter` : 'Diameter (DBH)'}
-                  </span>
-                  <span className="font-medium text-forest-800">
-                    {stem.diameter_cm} cm
-                    {tree.is_multistem && <span className="text-gray-400 text-xs"> at {stem.measurement_height_m}m</span>}
-                  </span>
-                </div>
-              ))}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Health</span>
-                <span className="font-medium">{healthLabel || '—'}</span>
-              </div>
-              {tree.is_multistem && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Type</span>
-                  <span className="font-medium text-forest-800">Multi-stem</span>
-                </div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-forest-800">Measurements</p>
+              {!editingMeasurements && (
+                <button onClick={() => setEditingMeasurements(true)}
+                  className="text-xs text-forest-600 hover:text-forest-700 font-medium">Edit</button>
               )}
             </div>
+
+            {editingMeasurements ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Height (m)</label>
+                    <input type="number" step="0.1" min="0" value={editHeight}
+                      onChange={e => setEditHeight(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Crown diameter (m)</label>
+                    <input type="number" step="0.1" min="0" value={editCrown}
+                      onChange={e => setEditCrown(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                </div>
+
+                {editStems.map((stem, i) => (
+                  <div key={i} className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        {tree.is_multistem ? `Stem ${stem.stem_number} ⌀ (cm)` : 'Diameter DBH (cm)'}
+                      </label>
+                      <input type="number" step="0.1" min="0" value={stem.diameter_cm}
+                        onChange={e => setEditStems(editStems.map((s, idx) => idx === i ? { ...s, diameter_cm: e.target.value } : s))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                    </div>
+                    {tree.is_multistem && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Measured at (m)</label>
+                        <input type="number" step="0.1" min="0" value={stem.measurement_height_m}
+                          onChange={e => setEditStems(editStems.map((s, idx) => idx === i ? { ...s, measurement_height_m: e.target.value } : s))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-2">Health status</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[{ value: 'good', label: 'Good', emoji: '🟢' }, { value: 'fair', label: 'Fair', emoji: '🟡' }, { value: 'poor', label: 'Poor', emoji: '🔴' }].map(opt => (
+                      <button key={opt.value} type="button" onClick={() => setEditHealth(opt.value)}
+                        className={`py-2 rounded-lg border-2 text-sm font-semibold flex items-center justify-center gap-1 transition-colors ${editHealth === opt.value ? 'border-forest-600 bg-forest-50 text-forest-700' : 'border-gray-200 text-gray-500'}`}>
+                        {opt.emoji} {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={handleSaveMeasurements} disabled={saving}
+                    className="flex-1 bg-forest-700 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-forest-600 disabled:opacity-50">
+                    {saving ? 'Saving…' : 'Save measurements'}
+                  </button>
+                  <button onClick={() => { setEditingMeasurements(false); setEditHeight(tree.height_m?.toString() || ''); setEditCrown(tree.crown_diameter_m?.toString() || ''); setEditHealth(tree.health_status || ''); setEditStems(stems.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() }))) }}
+                    className="text-gray-400 text-sm px-4 hover:text-gray-600">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Row label="Height" value={tree.height_m ? `${tree.height_m} m` : '—'} />
+                <Row label="Crown diameter" value={tree.crown_diameter_m ? `${tree.crown_diameter_m} m` : '—'} />
+                {stems.map((stem, i) => (
+                  <Row key={i}
+                    label={tree.is_multistem ? `Stem ${stem.stem_number} diameter` : 'Diameter (DBH)'}
+                    value={stem.diameter_cm ? `${stem.diameter_cm} cm${tree.is_multistem ? ` at ${stem.measurement_height_m}m` : ''}` : '—'} />
+                ))}
+                <Row label="Health" value={tree.health_status === 'good' ? '🟢 Good' : tree.health_status === 'fair' ? '🟡 Fair' : tree.health_status === 'poor' ? '🔴 Poor' : '—'} />
+                {tree.is_multistem && <Row label="Type" value="Multi-stem" />}
+              </div>
+            )}
           </div>
         )}
 
         {/* Location */}
-        {(tree.lat && tree.lng) && (
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className="font-semibold text-forest-800 mb-1">Location</p>
-            <p className="text-sm text-gray-500 font-mono">{tree.lat.toFixed(6)}, {tree.lng.toFixed(6)}</p>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-semibold text-forest-800">GPS Location</p>
+            <button onClick={recaptureGPS}
+              className="text-xs text-forest-600 hover:text-forest-700 font-medium">
+              {tree.lat ? 'Recapture' : '📍 Capture GPS'}
+            </button>
           </div>
-        )}
+          {tree.lat && tree.lng ? (
+            <p className="text-sm text-gray-500 font-mono">{tree.lat.toFixed(6)}, {tree.lng.toFixed(6)}</p>
+          ) : (
+            <p className="text-sm text-gray-400">No GPS coordinates recorded</p>
+          )}
+        </div>
 
       </div>
+    </div>
+  )
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex justify-between text-sm">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-medium text-forest-800">{value}</span>
     </div>
   )
 }

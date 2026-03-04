@@ -27,8 +27,9 @@ export default function NewTreePage() {
   const [speciesScientific, setSpeciesScientific] = useState('')
   const [needsId, setNeedsId] = useState(false)
 
-  // Height
+  // Height & crown
   const [height, setHeight] = useState('')
+  const [crown, setCrown] = useState('')
 
   // Stems
   const [isMultistem, setIsMultistem] = useState(false)
@@ -110,6 +111,7 @@ export default function NewTreePage() {
     if (!photos[0]) return 'Please take at least the first photo (full tree).'
     if (!needsId && !speciesCommon.trim()) return 'Please enter the common species name, or tap "I don\'t know the species".'
     if (!height) return 'Please enter the tree height.'
+    if (!crown) return 'Please enter the crown diameter.'
     const activeStems = isMultistem ? stems : [stems[0]]
     for (let i = 0; i < activeStems.length; i++) {
       if (!activeStems[i].diameter) return `Please enter the diameter${isMultistem ? ` for stem ${i + 1}` : ''}.`
@@ -146,6 +148,7 @@ export default function NewTreePage() {
       species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
       species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
       height_m: inaccessible ? null : parseFloat(height),
+      crown_diameter_m: inaccessible ? null : parseFloat(crown),
       is_multistem: inaccessible ? false : isMultistem,
       health_status: inaccessible ? null : health,
       photo_url: uploadedUrls[0] || null,
@@ -326,15 +329,27 @@ export default function NewTreePage() {
               )}
             </div>
 
-            {/* 3. Height */}
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <label className="block font-semibold text-forest-800 mb-1">Height *</label>
-              <p className="text-xs text-gray-400 mb-3">Total tree height in meters</p>
-              <div className="flex items-center gap-2">
-                <input type="number" step="0.1" min="0" value={height} onChange={e => setHeight(e.target.value)}
-                  placeholder="e.g. 8.5"
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                <span className="text-gray-500 font-medium">m</span>
+            {/* 3. Height & Crown */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+              <div>
+                <label className="block font-semibold text-forest-800 mb-1">Height *</label>
+                <p className="text-xs text-gray-400 mb-2">Total tree height in meters</p>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.1" min="0" value={height} onChange={e => setHeight(e.target.value)}
+                    placeholder="e.g. 8.5"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  <span className="text-gray-500 font-medium">m</span>
+                </div>
+              </div>
+              <div>
+                <label className="block font-semibold text-forest-800 mb-1">Crown diameter *</label>
+                <p className="text-xs text-gray-400 mb-2">Widest spread of the canopy in meters</p>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.1" min="0" value={crown} onChange={e => setCrown(e.target.value)}
+                    placeholder="e.g. 5.0"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  <span className="text-gray-500 font-medium">m</span>
+                </div>
               </div>
             </div>
 
