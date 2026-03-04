@@ -24,6 +24,7 @@ export default function TeacherDashboard() {
   const [school, setSchool] = useState(null)
   const [zones, setZones] = useState([])
   const [treeCounts, setTreeCounts] = useState({})
+  const [inaccessibleCounts, setInaccessibleCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [addingZone, setAddingZone] = useState(false)
   const [newZoneLabel, setNewZoneLabel] = useState('')
@@ -60,14 +61,16 @@ export default function TeacherDashboard() {
     if (zonesData?.length) {
       const { data: treesData } = await supabase
         .from('trees')
-        .select('zone_id')
+        .select('zone_id, inaccessible')
         .eq('school_id', teacherData.school_id)
 
-      const counts = {}
+      const counts = {}, iCounts = {}
       treesData?.forEach(t => {
         counts[t.zone_id] = (counts[t.zone_id] || 0) + 1
+        if (t.inaccessible) iCounts[t.zone_id] = (iCounts[t.zone_id] || 0) + 1
       })
       setTreeCounts(counts)
+      setInaccessibleCounts(iCounts)
     }
 
     setLoading(false)
@@ -293,9 +296,14 @@ export default function TeacherDashboard() {
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                  <span className="text-sm text-gray-500">
-                    🌳 {treeCounts[zone.id] || 0} trees
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
+                    {(inaccessibleCounts[zone.id] || 0) > 0 && (
+                      <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        ⚠️ {inaccessibleCounts[zone.id]} inaccessible
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => copyCode(zone)}
                     className="text-xs font-semibold bg-forest-50 text-forest-700 px-3 py-1.5 rounded-lg hover:bg-forest-100 transition-colors"
