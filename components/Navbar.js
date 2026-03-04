@@ -20,18 +20,34 @@ const LANGS = [
 function LangSwitcher() {
   const [active, setActive] = useState('en')
 
+  // Apply language via the combo element, retrying until GT is ready
+  const applyLang = (lang) => {
+    let attempts = 40
+    const tryApply = () => {
+      const select = document.querySelector('.goog-te-combo')
+      if (select && select.options.length > 1) {
+        select.value = lang === 'en' ? '' : lang
+        select.dispatchEvent(new Event('change', { bubbles: true }))
+      } else if (attempts-- > 0) {
+        setTimeout(tryApply, 250)
+      }
+    }
+    tryApply()
+  }
+
   useEffect(() => {
-    const match = document.cookie.match(/googtrans=\/en\/(\w+)/)
-    if (match) setActive(match[1])
+    const saved = localStorage.getItem('saf_lang') || 'en'
+    setActive(saved)
+    if (saved !== 'en') {
+      // Give GT time to initialize, then apply saved language
+      setTimeout(() => applyLang(saved), 1200)
+    }
   }, [])
 
   const switchLang = (lang) => {
-    // Always set an explicit cookie — even for English (/en/en)
-    // This overrides Google Translate's browser-language auto-detection
-    const value = lang === 'en' ? '/en/en' : `/en/${lang}`
-    document.cookie = `googtrans=${value}; path=/`
-    document.cookie = `googtrans=${value}; path=/; domain=.${location.hostname}`
-    window.location.replace(window.location.pathname + window.location.search)
+    localStorage.setItem('saf_lang', lang)
+    setActive(lang)
+    applyLang(lang)
   }
 
   return (
