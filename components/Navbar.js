@@ -27,12 +27,13 @@ function LangSwitcher() {
   }, [])
 
   const switchLang = (lang) => {
-    if (lang === 'en') {
-      // Clear the translation cookie and reload
-      document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC'
-      document.cookie = 'googtrans=; path=/; domain=.' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 UTC'
-    } else {
-      // Set translation cookie and reload
+    // Always clear all possible googtrans cookies first
+    const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
+    document.cookie = `googtrans=; path=/; ${expire}`
+    document.cookie = `googtrans=; path=/; domain=${location.hostname}; ${expire}`
+    document.cookie = `googtrans=; path=/; domain=.${location.hostname}; ${expire}`
+
+    if (lang !== 'en') {
       document.cookie = `googtrans=/en/${lang}; path=/`
       document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
     }
