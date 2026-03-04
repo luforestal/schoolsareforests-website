@@ -20,24 +20,32 @@ const LANGS = [
 function LangSwitcher() {
   const [active, setActive] = useState('en')
 
-  // Read current language from cookie on mount
   useEffect(() => {
     const match = document.cookie.match(/googtrans=\/en\/(\w+)/)
     if (match) setActive(match[1])
   }, [])
 
   const switchLang = (lang) => {
-    // Always clear all possible googtrans cookies first
+    // 1. Update cookies for persistence across reloads
     const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
     document.cookie = `googtrans=; path=/; ${expire}`
     document.cookie = `googtrans=; path=/; domain=${location.hostname}; ${expire}`
     document.cookie = `googtrans=; path=/; domain=.${location.hostname}; ${expire}`
-
     if (lang !== 'en') {
       document.cookie = `googtrans=/en/${lang}; path=/`
       document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
     }
-    window.location.reload()
+
+    // 2. Try the combo element for instant switch (no reload needed)
+    const select = document.querySelector('.goog-te-combo')
+    if (select) {
+      select.value = lang === 'en' ? '' : lang
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+      setActive(lang)
+    } else {
+      // Widget not ready yet — reload so the cookie takes effect
+      window.location.href = window.location.href
+    }
   }
 
   return (
