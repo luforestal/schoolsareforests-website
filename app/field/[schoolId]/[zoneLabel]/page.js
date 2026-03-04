@@ -29,7 +29,7 @@ export default function ZonePage() {
 
       if (zoneData) {
         const { data: treesData } = await supabase
-          .from('trees').select('*').eq('zone_id', zoneData.id).order('created_at')
+          .from('trees').select('*').eq('zone_id', zoneData.id).order('id')
         setTrees(treesData || [])
       }
       setLoading(false)
@@ -156,30 +156,29 @@ export default function ZonePage() {
         {regularTrees.length > 0 && (
           <div>
             <p className="text-gray-500 text-sm font-medium mb-3">🌳 {regularTrees.length} tree{regularTrees.length > 1 ? 's' : ''} recorded</p>
-            <div className="space-y-2">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-[2rem_1fr_3rem_3rem_3rem] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <span>#</span>
+                <span>Species</span>
+                <span className="text-center">↕ m</span>
+                <span className="text-center">⌀ cm</span>
+                <span className="text-center">Health</span>
+              </div>
               {regularTrees.map((tree, i) => (
-                <div key={tree.id} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-forest-100 text-forest-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-forest-800 text-sm">{tree.species_common || 'Unknown species'}</p>
+                <div key={tree.id} className={`grid grid-cols-[2rem_1fr_3rem_3rem_3rem] gap-2 px-4 py-3 items-center ${i < regularTrees.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                  <span className="text-xs font-bold text-forest-600">{i + 1}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-forest-800 truncate">{tree.species_common || '—'}</p>
                     {tree.species_scientific && (
-                      <p className="text-gray-400 text-xs italic">{tree.species_scientific}</p>
+                      <p className="text-xs text-gray-400 italic truncate">{tree.species_scientific}</p>
                     )}
-                    <p className="text-gray-400 text-xs mt-0.5">
-                      {tree.height_m && `↕ ${tree.height_m}m`}
-                      {tree.height_m && tree.health_status && ' · '}
-                      {tree.health_status && (
-                        tree.health_status === 'good' ? '🟢 Good' :
-                        tree.health_status === 'fair' ? '🟡 Fair' : '🔴 Poor'
-                      )}
-                    </p>
                   </div>
-                  {tree.photo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={tree.photo_url} alt="" className="h-12 w-12 object-cover rounded-lg flex-shrink-0" />
-                  )}
+                  <span className="text-xs text-gray-600 text-center">{tree.height_m ?? '—'}</span>
+                  <span className="text-xs text-gray-600 text-center">—</span>
+                  <span className="text-center text-sm">
+                    {tree.health_status === 'good' ? '🟢' : tree.health_status === 'fair' ? '🟡' : tree.health_status === 'poor' ? '🔴' : '—'}
+                  </span>
                 </div>
               ))}
             </div>
