@@ -26,15 +26,11 @@ function LangSwitcher() {
   }, [])
 
   const switchLang = (lang) => {
-    const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
-    document.cookie = `googtrans=; path=/; ${expire}`
-    document.cookie = `googtrans=; path=/; domain=${location.hostname}; ${expire}`
-    document.cookie = `googtrans=; path=/; domain=.${location.hostname}; ${expire}`
-    if (lang !== 'en') {
-      document.cookie = `googtrans=/en/${lang}; path=/`
-      document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
-    }
-    // replace() forces a fresh navigation instead of a cached reload
+    // Always set an explicit cookie — even for English (/en/en)
+    // This overrides Google Translate's browser-language auto-detection
+    const value = lang === 'en' ? '/en/en' : `/en/${lang}`
+    document.cookie = `googtrans=${value}; path=/`
+    document.cookie = `googtrans=${value}; path=/; domain=.${location.hostname}`
     window.location.replace(window.location.pathname + window.location.search)
   }
 
