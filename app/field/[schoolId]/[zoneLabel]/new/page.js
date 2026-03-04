@@ -80,22 +80,18 @@ export default function NewTreePage() {
     setIdentifying(true)
     try {
       const formData = new FormData()
-      formData.append('images', file)
-      formData.append('organs', 'auto')
-      const res = await fetch(
-        `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.NEXT_PUBLIC_PLANTNET_API_KEY}&lang=en&include-related-images=false`,
-        { method: 'POST', body: formData }
-      )
-      if (res.ok) {
-        const data = await res.json()
-        const top3 = (data.results || []).slice(0, 3).map(r => ({
+      formData.append('image', file)
+      const res = await fetch('/api/identify', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (res.ok && data.results) {
+        const top3 = data.results.slice(0, 3).map(r => ({
           score: Math.round(r.score * 100),
           scientific: r.species.scientificNameWithoutAuthor,
           common: r.species.commonNames?.[0] || '',
         }))
         setSuggestions(top3)
       }
-    } catch (_) {
+    } catch (err) {
       // silently fail — user can type manually
     } finally {
       setIdentifying(false)
