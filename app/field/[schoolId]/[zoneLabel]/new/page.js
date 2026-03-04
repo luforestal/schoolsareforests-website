@@ -34,6 +34,10 @@ export default function NewTreePage() {
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
 
+  // PlantNet identification
+  const [identifying, setIdentifying] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+
   // GPS (silent)
   const [coords, setCoords] = useState(null)
 
@@ -65,11 +69,37 @@ export default function NewTreePage() {
   const updateStem = (i, field, value) =>
     setStems(stems.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
 
-  const handlePhoto = (e) => {
+  const handlePhoto = async (e) => {
     const file = e.target.files[0]
     if (!file) return
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setSuggestions([])
+
+    // Identify with PlantNet
+    setIdentifying(true)
+    try {
+      const formData = new FormData()
+      formData.append('images', file)
+      formData.append('organs', 'auto')
+      const res = await fetch(
+        `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.NEXT_PUBLIC_PLANTNET_API_KEY}&lang=en&include-related-images=false`,
+        { method: 'POST', body: formData }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        const top3 = (data.results || []).slice(0, 3).map(r => ({
+          score: Math.round(r.score * 100),
+          scientific: r.species.scientificNameWithoutAuthor,
+          common: r.species.commonNames?.[0] || '',
+        }))
+        setSuggestions(top3)
+      }
+    } catch (_) {
+      // silently fail — user can type manually
+    } finally {
+      setIdentifying(false)
+    }
   }
 
   const validate = () => {
@@ -193,6 +223,51 @@ export default function NewTreePage() {
             {/* Species */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
               <p className="font-semibold text-forest-800">Species</p>
+
+              {/* PlantNet suggestions */}
+              {identifying && (
+                <div className="flex items-center gap-2 text-sm text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
+                  <svg className="animate-spin h-4 w-4 text-forest-600" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Identifying species…
+                </div>
+              )}
+
+              {!identifying && suggestions.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">🌿 PlantNet suggestions — tap to use:</p>
+                  <div className="space-y-2">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => { setSpeciesCommon(s.common || s.scientific); setSpeciesScientific(s.scientific); setSuggestions([]) }}
+                        className="w-full text-left border border-forest-200 bg-forest-50 rounded-lg px-3 py-2.5 hover:bg-forest-100 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-forest-800">{s.common || s.scientific}</p>
+                            <p className="text-xs italic text-gray-500">{s.scientific}</p>
+                          </div>
+                          <span className="text-xs font-bold text-forest-600 bg-white px-2 py-1 rounded-full border border-forest-200 flex-shrink-0 ml-2">
+                            {s.score}%
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSuggestions([])}
+                      className="text-xs text-gray-400 hover:text-gray-600 pt-1"
+                    >
+                      None of these — I'll type it manually
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Common name *</label>
                 <input
