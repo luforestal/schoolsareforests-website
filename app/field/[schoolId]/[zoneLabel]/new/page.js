@@ -2,7 +2,10 @@
 export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import dynamicImport from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
+
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), { ssr: false })
 
 const PHOTO_LABELS = [
   { label: 'Full tree', hint: 'Step back and capture the whole tree' },
@@ -29,7 +32,8 @@ export default function NewTreePage() {
 
   // Height & crown
   const [height, setHeight] = useState('')
-  const [crown, setCrown] = useState('')
+  const [crownNS, setCrownNS] = useState('')
+  const [crownEW, setCrownEW] = useState('')
 
   // Stems
   const [isMultistem, setIsMultistem] = useState(false)
@@ -46,23 +50,46 @@ export default function NewTreePage() {
   const [identifying, setIdentifying] = useState(false)
   const [suggestions, setSuggestions] = useState([])
 
-  // GPS (silent)
+  // GPS
   const [coords, setCoords] = useState(null)
+  const [gpsStatus, setGpsStatus] = useState('idle') // 'idle' | 'capturing' | 'success' | 'error'
+  const [showMapPicker, setShowMapPicker] = useState(false)
 
   useEffect(() => {
     const name = sessionStorage.getItem('saf_student_name')
     if (!name) { router.push(`/field/${schoolId}/${zoneLabel}`); return }
 
+    setGpsStatus('capturing')
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {}
+        pos => {
+          setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          setGpsStatus('success')
+        },
+        () => setGpsStatus('error')
       )
+    } else {
+      setGpsStatus('error')
     }
 
     supabase.from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
       .single().then(({ data }) => setZone(data))
   }, [schoolId, zoneLabel, router])
+
+  const recaptureGPS = () => {
+    setGpsStatus('capturing')
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          setGpsStatus('success')
+        },
+        () => setGpsStatus('error')
+      )
+    } else {
+      setGpsStatus('error')
+    }
+  }
 
   const handlePhoto = (index, e) => {
     const file = e.target.files[0]
@@ -112,7 +139,8 @@ export default function NewTreePage() {
     if (!photos[0]) return 'Please take at least the first photo (full tree).'
     if (!needsId && !speciesCommon.trim()) return 'Please enter the common species name, or tap "I don\'t know the species".'
     if (!height) return 'Please enter the tree height.'
-    if (!crown) return 'Please enter the crown diameter.'
+    if (!crownNS) return 'Please enter the crown diameter (North–South).'
+    if (!crownEW) return 'Please enter the crown diameter (West–East).'
     const activeStems = isMultistem ? stems : [stems[0]]
     for (let i = 0; i < activeStems.length; i++) {
       if (!activeStems[i].diameter) return `Please enter the diameter${isMultistem ? ` for stem ${i + 1}` : ''}.`
@@ -149,7 +177,8 @@ export default function NewTreePage() {
       species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
       species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
       height_m: inaccessible ? null : parseFloat(height),
-      crown_diameter_m: inaccessible ? null : parseFloat(crown),
+      crown_ns_m: inaccessible ? null : parseFloat(crownNS),
+      crown_ew_m: inaccessible ? null : parseFloat(crownEW),
       is_multistem: inaccessible ? false : isMultistem,
       health_status: inaccessible ? null : health,
       photo_url: uploadedUrls[0] || null,
@@ -351,12 +380,26 @@ export default function NewTreePage() {
               </div>
               <div>
                 <label className="block font-semibold text-forest-800 mb-1">Crown diameter *</label>
-                <p className="text-xs text-gray-400 mb-2">Widest spread of the canopy in meters</p>
-                <div className="flex items-center gap-2">
-                  <input type="number" step="0.1" min="0" value={crown} onChange={e => setCrown(e.target.value)}
-                    placeholder="e.g. 5.0"
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                  <span className="text-gray-500 font-medium">m</span>
+                <p className="text-xs text-gray-400 mb-2">Measure in two directions in meters</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">North–South</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" step="0.1" min="0" value={crownNS} onChange={e => setCrownNS(e.target.value)}
+                        placeholder="e.g. 5.0"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      <span className="text-gray-400 text-xs">m</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">West–East</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" step="0.1" min="0" value={crownEW} onChange={e => setCrownEW(e.target.value)}
+                        placeholder="e.g. 4.5"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      <span className="text-gray-400 text-xs">m</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -424,6 +467,51 @@ export default function NewTreePage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Location */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <p className="font-semibold text-forest-800 mb-3">📍 Location</p>
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm mb-3 ${
+            gpsStatus === 'capturing' ? 'bg-blue-50 text-blue-600' :
+            gpsStatus === 'success' ? 'bg-green-50 text-green-700' :
+            gpsStatus === 'error' ? 'bg-red-50 text-red-600' :
+            'bg-gray-50 text-gray-500'
+          }`}>
+            {gpsStatus === 'capturing' && (
+              <svg className="animate-spin h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            )}
+            {gpsStatus === 'capturing' && 'Capturing GPS…'}
+            {gpsStatus === 'success' && `✓ ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`}
+            {gpsStatus === 'error' && '❌ GPS not available'}
+            {gpsStatus === 'idle' && '— No location yet'}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={recaptureGPS}
+              className="flex-1 border border-forest-200 text-forest-700 text-sm font-medium py-2.5 rounded-lg hover:bg-forest-50 transition-colors">
+              📍 Recapture GPS
+            </button>
+            <button type="button" onClick={() => setShowMapPicker(true)}
+              className="flex-1 border border-forest-200 text-forest-700 text-sm font-medium py-2.5 rounded-lg hover:bg-forest-50 transition-colors">
+              🗺️ Adjust on map
+            </button>
+          </div>
+        </div>
+
+        {showMapPicker && (
+          <MapPicker
+            initialLat={coords?.lat}
+            initialLng={coords?.lng}
+            onConfirm={({ lat, lng }) => {
+              setCoords({ lat, lng })
+              setGpsStatus('success')
+              setShowMapPicker(false)
+            }}
+            onCancel={() => setShowMapPicker(false)}
+          />
         )}
 
         <button onClick={handleSubmit} disabled={submitting}

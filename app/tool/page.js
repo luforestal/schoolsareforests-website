@@ -81,19 +81,30 @@ export default function ToolPage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* ── Entry CTAs ── */}
       <section className="py-20 px-4 bg-forest-700 text-white text-center">
-        <h2 className="text-3xl font-bold mb-4">Interested in Being an Early Partner?</h2>
-        <p className="text-forest-200 text-lg mb-8 max-w-xl mx-auto">
-          We're looking for schools to pilot the tool when it launches.
-          Get in touch and we'll keep you posted.
+        <h2 className="text-3xl font-bold mb-3">Ready to get started?</h2>
+        <p className="text-forest-200 text-lg mb-12 max-w-xl mx-auto">
+          Teachers set up their school and zones. Students enter their school code and start collecting data.
         </p>
-        <Link
-          href="/contact"
-          className="bg-white text-forest-700 font-semibold px-10 py-4 rounded-full hover:bg-forest-50 transition-colors text-lg shadow-lg inline-block"
-        >
-          Contact Us →
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+          <Link
+            href="/teacher"
+            className="flex-1 bg-white text-forest-700 font-semibold px-8 py-5 rounded-2xl hover:bg-forest-50 transition-colors shadow-lg"
+          >
+            <div className="text-2xl mb-1">👩‍🏫</div>
+            <div className="text-lg">I'm a Teacher</div>
+            <div className="text-xs text-forest-500 mt-0.5 font-normal">Set up your school & zones</div>
+          </Link>
+          <Link
+            href="/student"
+            className="flex-1 bg-forest-600 text-white font-semibold px-8 py-5 rounded-2xl hover:bg-forest-500 transition-colors shadow-lg border border-forest-500"
+          >
+            <div className="text-2xl mb-1">🎒</div>
+            <div className="text-lg">I'm a Student</div>
+            <div className="text-xs text-forest-200 mt-0.5 font-normal">Enter your school code</div>
+          </Link>
+        </div>
       </section>
     </div>
   )

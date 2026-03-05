@@ -32,6 +32,9 @@ export default function TeacherDashboard() {
   const [newZoneDesc, setNewZoneDesc] = useState('')
   const [newZoneGroup, setNewZoneGroup] = useState('')
   const [copied, setCopied] = useState('')
+  const [copiedSchool, setCopiedSchool] = useState(false)
+  const [published, setPublished] = useState(false)
+  const [togglingPublished, setTogglingPublished] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -49,6 +52,7 @@ export default function TeacherDashboard() {
 
     setTeacher(teacherData)
     setSchool(teacherData.schools)
+    setPublished(teacherData.schools?.published ?? false)
 
     const { data: zonesData } = await supabase
       .from('zones')
@@ -100,11 +104,28 @@ export default function TeacherDashboard() {
     }
   }
 
+  const copySchoolCode = () => {
+    navigator.clipboard.writeText(school.id)
+    setCopiedSchool(true)
+    setTimeout(() => setCopiedSchool(false), 2000)
+  }
+
   const copyCode = (zone) => {
     const code = `${school.id}-${zone.label}`
     navigator.clipboard.writeText(code)
     setCopied(zone.id)
     setTimeout(() => setCopied(''), 2000)
+  }
+
+  const togglePublished = async () => {
+    setTogglingPublished(true)
+    const next = !published
+    const { error } = await supabase
+      .from('schools')
+      .update({ published: next })
+      .eq('id', school.id)
+    if (!error) setPublished(next)
+    setTogglingPublished(false)
   }
 
   const handleSignOut = async () => {
@@ -157,6 +178,44 @@ export default function TeacherDashboard() {
           <div className="text-right flex-shrink-0">
             {school?.phone && <p className="text-sm text-gray-500">📞 {school.phone}</p>}
             <p className="text-xs text-gray-400 mt-1 font-mono">ID: {school?.id}</p>
+          </div>
+        </div>
+
+        {/* Publish toggle */}
+        <div className="bg-white rounded-xl shadow-sm p-5 mb-8 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-forest-800">Visible in Explore Schools</p>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {published
+                ? 'Your school is publicly visible on the map.'
+                : 'Your school is hidden — only you can see it.'}
+            </p>
+          </div>
+          <button
+            onClick={togglePublished}
+            disabled={togglingPublished}
+            className={`relative inline-flex h-7 w-14 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+              published ? 'bg-forest-600' : 'bg-gray-200'
+            } ${togglingPublished ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${published ? 'translate-x-7' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {/* Share with students */}
+        <div className="bg-forest-800 text-white rounded-xl p-5 mb-8">
+          <p className="text-forest-300 text-xs uppercase tracking-wide mb-1">Share with your students</p>
+          <p className="text-sm text-forest-100 mb-3">
+            Give students this code. They go to <span className="font-mono bg-forest-700 px-1 rounded">schoolsareforests.org/student</span> and type it in.
+          </p>
+          <div className="flex items-center gap-3 bg-forest-900/50 rounded-xl px-4 py-3">
+            <span className="font-mono text-white flex-1 text-sm break-all">{school?.id}</span>
+            <button
+              onClick={copySchoolCode}
+              className="flex-shrink-0 bg-white text-forest-800 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-50 transition-colors"
+            >
+              {copiedSchool ? '✓ Copied!' : 'Copy'}
+            </button>
           </div>
         </div>
 
@@ -320,10 +379,9 @@ export default function TeacherDashboard() {
         <div className="mt-8 bg-forest-50 rounded-xl p-5 border border-forest-100">
           <h3 className="font-semibold text-forest-800 mb-2">How to use with students</h3>
           <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-            <li>Create a zone for each area of your campus</li>
-            <li>Assign each zone to a student group</li>
-            <li>Share the zone code with each group (e.g. <span className="font-mono bg-white px-1 rounded">{school?.id}-A</span>)</li>
-            <li>Students enter the code in the field app to start collecting data</li>
+            <li>Create a zone for each area of your campus and assign a group number</li>
+            <li>Copy your school code from the panel above and share it with all students</li>
+            <li>Students go to <span className="font-mono bg-white px-1 rounded">schoolsareforests.org/student</span>, enter the code, and pick their zone</li>
           </ol>
         </div>
       </div>

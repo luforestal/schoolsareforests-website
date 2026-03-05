@@ -102,6 +102,7 @@ export default function TeacherSetupPage() {
   const [newSchoolName, setNewSchoolName] = useState('')
   const [newSchoolAddress, setNewSchoolAddress] = useState('')
   const [newSchoolCity, setNewSchoolCity] = useState('')
+  const [newSchoolRegion, setNewSchoolRegion] = useState('')
   const [newSchoolPostal, setNewSchoolPostal] = useState('')
   const [newSchoolPhone, setNewSchoolPhone] = useState('')
   const [logoFile, setLogoFile] = useState(null)
@@ -179,6 +180,7 @@ export default function TeacherSetupPage() {
         address: newSchoolAddress.trim() || null,
         location: `${newSchoolCity.trim()}, ${selectedCountry}`,
         country: selectedCountry,
+        region: newSchoolRegion.trim() || null,
         phone: newSchoolPhone.trim() || null,
         logo_url: logoUrl,
         trees_count: 0,
@@ -335,6 +337,14 @@ export default function TeacherSetupPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                       <input type="text" value={newSchoolCity} onChange={e => setNewSchoolCity(e.target.value)}
                         placeholder="Berlin"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        State / Region / Department <span className="text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <input type="text" value={newSchoolRegion} onChange={e => setNewSchoolRegion(e.target.value)}
+                        placeholder="e.g. California, Cundinamarca, Bayern"
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                     </div>
                     <div>

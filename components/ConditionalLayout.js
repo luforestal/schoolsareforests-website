@@ -3,7 +3,7 @@ import { usePathname } from 'next/navigation'
 import Navbar from './Navbar'
 import Footer from './Footer'
 
-const APP_ROUTES = ['/teacher', '/field']
+const APP_ROUTES = ['/teacher', '/field', '/student']
 
 export default function ConditionalLayout({ children }) {
   const pathname = usePathname()

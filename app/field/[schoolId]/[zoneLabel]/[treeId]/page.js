@@ -2,7 +2,10 @@
 export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import dynamicImport from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
+
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), { ssr: false })
 
 export default function TreeDetailPage() {
   const { schoolId, zoneLabel, treeId } = useParams()
@@ -14,6 +17,7 @@ export default function TreeDetailPage() {
   const [loading, setLoading] = useState(true)
   const [treeNumber, setTreeNumber] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [showMapPicker, setShowMapPicker] = useState(false)
 
   // Edit species
   const [editingSpecies, setEditingSpecies] = useState(false)
@@ -23,7 +27,8 @@ export default function TreeDetailPage() {
   // Edit measurements
   const [editingMeasurements, setEditingMeasurements] = useState(false)
   const [editHeight, setEditHeight] = useState('')
-  const [editCrown, setEditCrown] = useState('')
+  const [editCrownNS, setEditCrownNS] = useState('')
+  const [editCrownEW, setEditCrownEW] = useState('')
   const [editHealth, setEditHealth] = useState('')
   const [editStems, setEditStems] = useState([])
 
@@ -36,7 +41,8 @@ export default function TreeDetailPage() {
       setEditCommon(treeData.species_common || '')
       setEditScientific(treeData.species_scientific || '')
       setEditHeight(treeData.height_m?.toString() || '')
-      setEditCrown(treeData.crown_diameter_m?.toString() || '')
+      setEditCrownNS(treeData.crown_ns_m?.toString() || '')
+      setEditCrownEW(treeData.crown_ew_m?.toString() || '')
       setEditHealth(treeData.health_status || '')
 
       const { data: stemsData } = await supabase
@@ -75,7 +81,8 @@ export default function TreeDetailPage() {
     setSaving(true)
     await supabase.from('trees').update({
       height_m: parseFloat(editHeight) || null,
-      crown_diameter_m: parseFloat(editCrown) || null,
+      crown_ns_m: parseFloat(editCrownNS) || null,
+      crown_ew_m: parseFloat(editCrownEW) || null,
       health_status: editHealth || null,
     }).eq('id', treeId)
 
@@ -87,7 +94,7 @@ export default function TreeDetailPage() {
       }).eq('id', stem.id)
     }
 
-    setTree(t => ({ ...t, height_m: parseFloat(editHeight) || null, crown_diameter_m: parseFloat(editCrown) || null, health_status: editHealth || null }))
+    setTree(t => ({ ...t, height_m: parseFloat(editHeight) || null, crown_ns_m: parseFloat(editCrownNS) || null, crown_ew_m: parseFloat(editCrownEW) || null, health_status: editHealth || null }))
     setStems(editStems.map(s => ({ ...s, diameter_cm: parseFloat(s.diameter_cm), measurement_height_m: parseFloat(s.measurement_height_m) })))
     setEditingMeasurements(false)
     setSaving(false)
@@ -217,17 +224,23 @@ export default function TreeDetailPage() {
 
             {editingMeasurements ? (
               <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Height (m)</label>
+                  <input type="number" step="0.1" min="0" value={editHeight}
+                    onChange={e => setEditHeight(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Height (m)</label>
-                    <input type="number" step="0.1" min="0" value={editHeight}
-                      onChange={e => setEditHeight(e.target.value)}
+                    <label className="block text-xs text-gray-500 mb-1">Crown N–S (m)</label>
+                    <input type="number" step="0.1" min="0" value={editCrownNS}
+                      onChange={e => setEditCrownNS(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Crown diameter (m)</label>
-                    <input type="number" step="0.1" min="0" value={editCrown}
-                      onChange={e => setEditCrown(e.target.value)}
+                    <label className="block text-xs text-gray-500 mb-1">Crown W–E (m)</label>
+                    <input type="number" step="0.1" min="0" value={editCrownEW}
+                      onChange={e => setEditCrownEW(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                   </div>
                 </div>
@@ -270,14 +283,15 @@ export default function TreeDetailPage() {
                     className="flex-1 bg-forest-700 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-forest-600 disabled:opacity-50">
                     {saving ? 'Saving…' : 'Save measurements'}
                   </button>
-                  <button onClick={() => { setEditingMeasurements(false); setEditHeight(tree.height_m?.toString() || ''); setEditCrown(tree.crown_diameter_m?.toString() || ''); setEditHealth(tree.health_status || ''); setEditStems(stems.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() }))) }}
+                  <button onClick={() => { setEditingMeasurements(false); setEditHeight(tree.height_m?.toString() || ''); setEditCrownNS(tree.crown_ns_m?.toString() || ''); setEditCrownEW(tree.crown_ew_m?.toString() || ''); setEditHealth(tree.health_status || ''); setEditStems(stems.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() }))) }}
                     className="text-gray-400 text-sm px-4 hover:text-gray-600">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
                 <Row label="Height" value={tree.height_m ? `${tree.height_m} m` : '—'} />
-                <Row label="Crown diameter" value={tree.crown_diameter_m ? `${tree.crown_diameter_m} m` : '—'} />
+                <Row label="Crown N–S" value={tree.crown_ns_m ? `${tree.crown_ns_m} m` : '—'} />
+                <Row label="Crown W–E" value={tree.crown_ew_m ? `${tree.crown_ew_m} m` : '—'} />
                 {stems.map((stem, i) => (
                   <Row key={i}
                     label={tree.is_multistem ? `Stem ${stem.stem_number} diameter` : 'Diameter (DBH)'}
@@ -292,19 +306,36 @@ export default function TreeDetailPage() {
 
         {/* Location */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-1">
-            <p className="font-semibold text-forest-800">GPS Location</p>
+          <p className="font-semibold text-forest-800 mb-2">📍 GPS Location</p>
+          {tree.lat && tree.lng ? (
+            <p className="text-sm text-gray-500 font-mono mb-3">{tree.lat.toFixed(6)}, {tree.lng.toFixed(6)}</p>
+          ) : (
+            <p className="text-sm text-gray-400 mb-3">No GPS coordinates recorded</p>
+          )}
+          <div className="flex gap-2">
             <button onClick={recaptureGPS}
-              className="text-xs text-forest-600 hover:text-forest-700 font-medium">
-              {tree.lat ? 'Recapture' : '📍 Capture GPS'}
+              className="flex-1 border border-forest-200 text-forest-700 text-sm font-medium py-2.5 rounded-lg hover:bg-forest-50 transition-colors">
+              📍 Recapture GPS
+            </button>
+            <button onClick={() => setShowMapPicker(true)}
+              className="flex-1 border border-forest-200 text-forest-700 text-sm font-medium py-2.5 rounded-lg hover:bg-forest-50 transition-colors">
+              🗺️ Pick on map
             </button>
           </div>
-          {tree.lat && tree.lng ? (
-            <p className="text-sm text-gray-500 font-mono">{tree.lat.toFixed(6)}, {tree.lng.toFixed(6)}</p>
-          ) : (
-            <p className="text-sm text-gray-400">No GPS coordinates recorded</p>
-          )}
         </div>
+
+        {showMapPicker && (
+          <MapPicker
+            initialLat={tree.lat}
+            initialLng={tree.lng}
+            onConfirm={async ({ lat, lng }) => {
+              await supabase.from('trees').update({ lat, lng }).eq('id', treeId)
+              setTree(t => ({ ...t, lat, lng }))
+              setShowMapPicker(false)
+            }}
+            onCancel={() => setShowMapPicker(false)}
+          />
+        )}
 
       </div>
     </div>
