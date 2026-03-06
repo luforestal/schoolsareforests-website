@@ -52,8 +52,8 @@ function LangSwitcher() {
           translate="no"
           className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
             active === code
-              ? 'bg-forest-700 text-white'
-              : 'text-forest-600 hover:bg-forest-50'
+              ? 'bg-white text-forest-900'
+              : 'text-forest-200 hover:text-white'
           }`}
         >
           {label}
@@ -68,7 +68,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
+    <nav className="bg-forest-900 shadow-md sticky top-0 z-50">
       {/* Hidden Google Translate widget */}
       <div id="google_translate_element" aria-hidden="true" />
 
@@ -77,8 +77,10 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Schools Are Forests" className="h-10 w-auto" />
+            <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm p-0.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Schools Are Forests" className="w-full h-full object-contain" />
+            </div>
           </Link>
 
           {/* Desktop nav */}
@@ -89,21 +91,21 @@ export default function Navbar() {
                 href={link.href}
                 className={`transition-colors font-medium ${
                   pathname === link.href
-                    ? 'text-forest-700'
-                    : 'text-gray-600 hover:text-forest-700'
+                    ? 'text-white font-semibold'
+                    : 'text-forest-200 hover:text-white'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="border-l border-gray-200 pl-4">
+            <div className="border-l border-forest-700 pl-4">
               <LangSwitcher />
             </div>
           </div>
 
           {/* Mobile hamburger */}
           <button
-            className="md:hidden text-2xl leading-none text-forest-700"
+            className="md:hidden text-2xl leading-none text-white"
             onClick={() => setMenuOpen(o => !o)}
             aria-label="Toggle menu"
           >
@@ -113,12 +115,12 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden pb-5 flex flex-col gap-4 text-sm border-t border-gray-100 pt-4">
+          <div className="md:hidden pb-5 flex flex-col gap-4 text-sm border-t border-forest-700 pt-4">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-gray-600 hover:text-forest-700 transition-colors font-medium"
+                className="text-forest-200 hover:text-white transition-colors font-medium"
                 onClick={() => setMenuOpen(false)}
               >
                 {link.label}

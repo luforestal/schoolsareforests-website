@@ -9,9 +9,7 @@ export default function HomePage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative text-white py-20 px-4 text-center overflow-hidden bg-white">
-        {/* Dark green gradient at 82% opacity — white bg shows through softly */}
-        <div className="absolute inset-0 bg-gradient-to-br from-forest-900 via-forest-700 to-forest-500" style={{ opacity: 0.82 }} />
+      <section className="relative py-20 px-4 text-center overflow-hidden bg-gradient-to-b from-white via-white to-forest-700">
 
         {/* Tree canopy circles decoration */}
         <svg
@@ -37,24 +35,20 @@ export default function HomePage() {
         {/* Content */}
         <div className="relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="Schools Are Forests"
-            className="w-4/5 md:w-2/3 max-w-3xl mx-auto mb-8 drop-shadow-2xl"
-          />
-          <p className="text-xl md:text-2xl text-forest-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <img src="/logo.png" alt="Schools Are Forests" className="w-[360px] md:w-[540px] mx-auto mb-8 drop-shadow-lg" />
+          <p className="text-xl md:text-2xl text-forest-900 mb-10 max-w-2xl mx-auto leading-relaxed">
             Mapping and celebrating the trees that grow on school campuses around the world.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/schools"
-              className="bg-white text-forest-700 font-semibold px-8 py-3 rounded-full hover:bg-forest-50 transition-colors shadow-lg"
+              className="bg-forest-800 text-white font-semibold px-8 py-3 rounded-full hover:bg-forest-900 transition-colors shadow-lg"
             >
               Explore the Map
             </Link>
             <Link
               href="/about"
-              className="border-2 border-white text-white font-semibold px-8 py-3 rounded-full hover:bg-white hover:text-forest-700 transition-colors"
+              className="border-2 border-forest-700 text-forest-800 font-semibold px-8 py-3 rounded-full hover:bg-forest-700 hover:text-white transition-colors"
             >
               Learn More
             </Link>
