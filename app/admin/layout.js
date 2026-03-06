@@ -38,18 +38,18 @@ export default function AdminLayout({ children }) {
           <div className="flex items-center gap-6">
             <span className="font-bold text-sm tracking-wide">SAF Admin</span>
             <nav className="flex gap-5 text-sm">
-              <a
-                href="/admin/teachers"
-                className={`transition-colors ${pathname === '/admin/teachers' ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'}`}
-              >
-                Teachers
-              </a>
-              <a
-                href="/admin/schools"
-                className={`transition-colors ${pathname === '/admin/schools' ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'}`}
-              >
-                Schools
-              </a>
+              {[
+                { href: '/admin/teachers', label: 'Teachers' },
+                { href: '/admin/schools', label: 'Schools' },
+                { href: '/admin/explore', label: 'Explore' },
+                { href: '/admin/quality', label: 'Quality' },
+              ].map(({ href, label }) => (
+                <a key={href} href={href}
+                  className={`transition-colors ${pathname === href ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'}`}
+                >
+                  {label}
+                </a>
+              ))}
             </nav>
           </div>
           <a href="/" className="text-gray-400 text-sm hover:text-white transition-colors">

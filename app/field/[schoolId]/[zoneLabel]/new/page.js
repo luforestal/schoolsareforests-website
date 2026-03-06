@@ -49,6 +49,7 @@ export default function NewTreePage() {
   // PlantNet
   const [identifying, setIdentifying] = useState(false)
   const [suggestions, setSuggestions] = useState([])
+  const [selectedConfidence, setSelectedConfidence] = useState(null)
 
   // GPS
   const [coords, setCoords] = useState(null)
@@ -185,6 +186,7 @@ export default function NewTreePage() {
       inaccessible,
       inaccessible_note: inaccessible ? inaccessibleNote.trim() : null,
       needs_identification: !inaccessible && needsId,
+      species_confidence: (!inaccessible && !needsId && selectedConfidence) ? selectedConfidence : null,
       lat: coords?.lat || null,
       lng: coords?.lng || null,
     }).select().single()
@@ -316,7 +318,7 @@ export default function NewTreePage() {
                   <div className="space-y-2">
                     {suggestions.map((s, i) => (
                       <button key={i} type="button"
-                        onClick={() => { setSpeciesCommon(s.common || s.scientific); setSpeciesScientific(s.scientific); setSuggestions([]); setNeedsId(false) }}
+                        onClick={() => { setSpeciesCommon(s.common || s.scientific); setSpeciesScientific(s.scientific); setSelectedConfidence(s.score); setSuggestions([]); setNeedsId(false) }}
                         className="w-full text-left border border-forest-200 bg-forest-50 rounded-lg px-3 py-2.5 hover:bg-forest-100 transition-colors">
                         <div className="flex items-center justify-between">
                           <div>
@@ -349,7 +351,7 @@ export default function NewTreePage() {
                       placeholder="e.g. Quercus robur"
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 italic" />
                   </div>
-                  <button type="button" onClick={() => { setNeedsId(true); setSpeciesCommon(''); setSpeciesScientific(''); setSuggestions([]) }}
+                  <button type="button" onClick={() => { setNeedsId(true); setSpeciesCommon(''); setSpeciesScientific(''); setSelectedConfidence(null); setSuggestions([]) }}
                     className="w-full border-2 border-dashed border-gray-200 rounded-lg py-3 text-sm text-gray-400 hover:border-amber-300 hover:text-amber-600 transition-colors">
                     ❓ I don't know the species — request help
                   </button>

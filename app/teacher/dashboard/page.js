@@ -51,6 +51,14 @@ export default function TeacherDashboard() {
   const [published, setPublished] = useState(false)
   const [togglingPublished, setTogglingPublished] = useState(false)
 
+  // Zone editing state
+  const [editingZone, setEditingZone] = useState(null)
+  const [editLabel, setEditLabel] = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editGroup, setEditGroup] = useState('')
+  const [validationCounts, setValidationCounts] = useState({})
+
   // Session management state
   const [sessions, setSessions] = useState([])
   const [activeSession, setActiveSession] = useState(null)
@@ -106,6 +114,18 @@ export default function TeacherDashboard() {
     }
 
     await loadSessions(teacherData.school_id)
+
+    // Load validation counts per zone
+    const { data: validationsData } = await supabase
+      .from('tree_validations')
+      .select('zone_id')
+      .eq('school_id', teacherData.school_id)
+    const vCounts = {}
+    validationsData?.forEach(v => {
+      vCounts[v.zone_id] = (vCounts[v.zone_id] || 0) + 1
+    })
+    setValidationCounts(vCounts)
+
     setLoading(false)
   }
 
@@ -147,6 +167,33 @@ export default function TeacherDashboard() {
       setNewZoneGroup('')
       loadData()
     }
+  }
+
+  // --- Zone management ---
+
+  const startEditZone = (zone) => {
+    setEditingZone(zone)
+    setEditLabel(zone.label)
+    setEditCategory(zone.category || '')
+    setEditDesc(zone.description || '')
+    setEditGroup(zone.group_number ? String(zone.group_number) : '')
+  }
+
+  const saveEditZone = async (e) => {
+    e.preventDefault()
+    await supabase.from('zones').update({
+      category: editCategory || null,
+      description: editDesc.trim() || null,
+      group_number: editGroup ? parseInt(editGroup) : null,
+    }).eq('id', editingZone.id)
+    setEditingZone(null)
+    loadData()
+  }
+
+  const deleteZone = async (zone) => {
+    if (!confirm(`Delete Zone ${zone.label}? This will also delete all trees recorded in this zone. This cannot be undone.`)) return
+    await supabase.from('zones').delete().eq('id', zone.id)
+    loadData()
   }
 
   // --- Session management ---
@@ -495,53 +542,115 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
-            {zones.map(zone => (
-              <div key={zone.id} className="bg-white rounded-xl p-5 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-                      {zone.label}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-forest-800">Zone {zone.label}</p>
-                        {zone.category && (
-                          <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">
-                            {zone.category}
-                          </span>
-                        )}
+            {zones.map(zone => {
+              const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
+              const requiredValidations = Math.max(1, Math.ceil(accessibleCount / 10))
+              const doneValidations = validationCounts[zone.id] || 0
+              const validationComplete = accessibleCount === 0 || doneValidations >= requiredValidations
+              return (
+                <div key={zone.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  {/* Clickable area → zone detail */}
+                  <button
+                    onClick={() => router.push(`/teacher/zone/${zone.id}`)}
+                    className="w-full p-5 text-left hover:bg-forest-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                          {zone.label}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-forest-800">Zone {zone.label}</p>
+                            {zone.category && (
+                              <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">
+                                {zone.category}
+                              </span>
+                            )}
+                          </div>
+                          {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
+                          {zone.group_number && (
+                            <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>
+                          )}
+                        </div>
                       </div>
-                      {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
-                      {zone.group_number && (
-                        <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>
+                      <span className="text-gray-300 text-xl flex-shrink-0">›</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
+                      {(inaccessibleCounts[zone.id] || 0) > 0 && (
+                        <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                          ⚠️ {inaccessibleCounts[zone.id]} inaccessible
+                        </span>
+                      )}
+                      {accessibleCount > 0 && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          validationComplete
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-red-50 text-red-600'
+                        }`}>
+                          {validationComplete ? '✓' : '⚠'} {doneValidations}/{requiredValidations} validated
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0 ${
-                    zone.completed ? 'bg-forest-100 text-forest-700' : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    {zone.completed ? 'Complete' : 'In progress'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
-                    {(inaccessibleCounts[zone.id] || 0) > 0 && (
-                      <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                        ⚠️ {inaccessibleCounts[zone.id]} inaccessible
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => copyCode(zone)}
-                    className="text-xs font-semibold bg-forest-50 text-forest-700 px-3 py-1.5 rounded-lg hover:bg-forest-100 transition-colors"
-                  >
-                    {copied === zone.id ? '✓ Copied!' : `Zone ${zone.label} link`}
                   </button>
+
+                  {/* Edit / Delete bar */}
+                  <div className="px-5 py-2.5 border-t border-gray-50 flex gap-3">
+                    <button
+                      onClick={() => startEditZone(zone)}
+                      className="text-xs font-semibold text-forest-700 hover:text-forest-600 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteZone(zone)}
+                      className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Inline edit form */}
+                  {editingZone?.id === zone.id && (
+                    <form onSubmit={saveEditZone} className="px-5 pb-5 border-t border-forest-100 bg-forest-50">
+                      <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide pt-4 mb-3">Edit Zone {zone.label}</p>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                          <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400">
+                            <option value="">No category</option>
+                            {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
+                          <input type="number" min="1" value={editGroup} onChange={e => setEditGroup(e.target.value)}
+                            placeholder="e.g. 1"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                        <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                          placeholder="e.g. North side near the gate"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="bg-forest-700 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-600 transition-colors">
+                          Save
+                        </button>
+                        <button type="button" onClick={() => setEditingZone(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-gray-600">
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
