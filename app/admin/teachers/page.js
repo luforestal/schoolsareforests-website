@@ -20,12 +20,13 @@ export default function AdminTeachersPage() {
   useEffect(() => { loadTeachers() }, [])
 
   const loadTeachers = async () => {
-    const { data } = await supabase
-      .from('teachers')
-      .select('*, schools(name, country, location)')
-      .order('name')
-
-    setTeachers(data || [])
+    const [{ data: teachersData }, { data: schoolsData }] = await Promise.all([
+      supabase.from('teachers').select('*').order('name'),
+      supabase.from('schools').select('id, name, country, location'),
+    ])
+    const schoolMap = Object.fromEntries((schoolsData || []).map(s => [s.id, s]))
+    const merged = (teachersData || []).map(t => ({ ...t, schools: schoolMap[t.school_id] || null }))
+    setTeachers(merged)
     setLoading(false)
   }
 

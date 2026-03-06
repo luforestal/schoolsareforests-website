@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import WorldMapWrapper from '@/components/WorldMapWrapper'
+import VolunteerCard from '@/components/VolunteerCard'
 import { schools } from '@/data/schools'
 
 export default function HomePage() {
@@ -211,28 +212,28 @@ export default function HomePage() {
 
       {/* ── Support Us ── */}
       <section className="py-20 px-4 bg-gray-50">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-forest-700 mb-4">Support Our Work</h2>
-          <p className="text-gray-500 text-lg leading-relaxed mb-10">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-forest-700 mb-4 text-center">Support Our Work</h2>
+          <p className="text-gray-500 text-lg leading-relaxed mb-10 text-center">
             Schools Are Forests is a community-driven project. Your support — whether through
             volunteering, spreading the word, or a donation — helps us document more trees and
             reach more schools around the world.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 text-left">
               <div className="text-3xl mb-3">📣</div>
               <h3 className="font-semibold text-forest-800 mb-2">Spread the Word</h3>
               <p className="text-gray-500 text-sm">Share our project with schools and educators in your network.</p>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="text-3xl mb-3">🙋</div>
-              <h3 className="font-semibold text-forest-800 mb-2">Volunteer</h3>
-              <p className="text-gray-500 text-sm">Help us with field inventories, translations, or web development.</p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <VolunteerCard />
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 text-left flex flex-col">
               <div className="text-3xl mb-3">💚</div>
               <h3 className="font-semibold text-forest-800 mb-2">Donate</h3>
               <p className="text-gray-500 text-sm">Help fund field equipment, travel, and tool development.</p>
+              <a href="https://www.paypal.com/" target="_blank" rel="noopener noreferrer"
+                className="mt-4 text-sm font-semibold text-forest-600 hover:text-forest-800 transition-colors">
+                Donate via PayPal →
+              </a>
             </div>
           </div>
           <div className="mt-10">
