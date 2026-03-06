@@ -74,7 +74,7 @@ export default function TeacherDashboard() {
 
     const { data: teacherData } = await supabase
       .from('teachers')
-      .select('*, schools(*)')
+      .select('*')
       .eq('id', user.id)
       .single()
 
@@ -87,8 +87,15 @@ export default function TeacherDashboard() {
     }
 
     setTeacher(teacherData)
-    setSchool(teacherData.schools)
-    setPublished(teacherData.schools?.published ?? false)
+
+    const { data: schoolData } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('id', teacherData.school_id)
+      .single()
+
+    setSchool(schoolData)
+    setPublished(schoolData?.published ?? false)
 
     const { data: zonesData } = await supabase
       .from('zones')

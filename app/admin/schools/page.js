@@ -23,16 +23,21 @@ export default function AdminSchoolsPage() {
     setLoading(false)
   }
 
+  const getOwner = (school) =>
+    teachers.find(t => t.id === school.owner_id)
+
   const getTeachersForSchool = (schoolId) =>
     teachers.filter(t => t.school_id === schoolId)
 
   const transferOwnership = async (school) => {
     if (!newOwnerId) return
     setActionLoading(true)
-    // In the current schema, school ownership is implicit (who created it).
-    // This sets a note — full ownership transfer comes in Phase 3 with school_teachers table.
-    // For now, we just log the intent and can notify manually.
-    alert(`Ownership transfer requested: school "${school.name}" → teacher ID ${newOwnerId}.\n\nThis will be fully automated in Phase 3. For now, note this and update the teachers table manually if needed.`)
+    const { error } = await supabase
+      .from('schools')
+      .update({ owner_id: newOwnerId })
+      .eq('id', school.id)
+    if (error) { alert('Error: ' + error.message); setActionLoading(false); return }
+    await loadData()
     setTransferring(null)
     setNewOwnerId('')
     setActionLoading(false)
@@ -50,6 +55,7 @@ export default function AdminSchoolsPage() {
       <div className="space-y-3">
         {schools.map(school => {
           const schoolTeachers = getTeachersForSchool(school.id)
+          const owner = getOwner(school)
           return (
             <div key={school.id} className="bg-white rounded-xl border border-gray-100 p-5">
               <div className="flex items-start justify-between gap-4">
@@ -58,6 +64,13 @@ export default function AdminSchoolsPage() {
                   <p className="text-sm text-gray-400 mt-0.5">{school.location || school.country}</p>
                   <p className="text-xs text-gray-300 font-mono mt-1">{school.id}</p>
 
+                  {/* Owner */}
+                  {owner && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Owner: <span className="font-semibold text-gray-700">{owner.name || owner.email}</span>
+                    </p>
+                  )}
+
                   {/* Teachers in this school */}
                   <div className="mt-2">
                     {schoolTeachers.length === 0 ? (
@@ -65,8 +78,8 @@ export default function AdminSchoolsPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2 mt-1">
                         {schoolTeachers.map(t => (
-                          <span key={t.id} className="text-xs bg-forest-50 text-forest-700 px-2 py-0.5 rounded-full">
-                            {t.name || t.email}
+                          <span key={t.id} className={`text-xs px-2 py-0.5 rounded-full ${t.id === school.owner_id ? 'bg-forest-100 text-forest-800 font-semibold' : 'bg-forest-50 text-forest-700'}`}>
+                            {t.name || t.email}{t.id === school.owner_id ? ' ★' : ''}
                           </span>
                         ))}
                       </div>
@@ -75,26 +88,28 @@ export default function AdminSchoolsPage() {
                 </div>
 
                 <div className="flex-shrink-0">
-                  <button
-                    onClick={() => { setTransferring(school); setNewOwnerId('') }}
-                    className="text-xs font-semibold bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Transfer Ownership
-                  </button>
+                  {schoolTeachers.length > 0 && (
+                    <button
+                      onClick={() => { setTransferring(school); setNewOwnerId('') }}
+                      className="text-xs font-semibold bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Transfer Ownership
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Transfer form */}
               {transferring?.id === school.id && (
                 <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-xs font-semibold text-gray-600 mb-2">Transfer ownership to:</p>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Transfer ownership to a teacher in this school:</p>
                   <select
                     value={newOwnerId}
                     onChange={e => setNewOwnerId(e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white mb-2"
                   >
                     <option value="">Select a teacher…</option>
-                    {teachers.map(t => (
+                    {schoolTeachers.map(t => (
                       <option key={t.id} value={t.id}>{t.name || t.email} ({t.email})</option>
                     ))}
                   </select>

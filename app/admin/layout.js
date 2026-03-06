@@ -58,9 +58,12 @@ export default function AdminLayout({ children }) {
               ))}
             </nav>
           </div>
-          <a href="/" className="text-gray-400 text-sm hover:text-white transition-colors">
-            ← Back to site
-          </a>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = '/admin/login' }}
+            className="text-gray-400 text-sm hover:text-white transition-colors"
+          >
+            Sign out
+          </button>
         </div>
       </div>
       <div className="max-w-5xl mx-auto px-6 py-8">
