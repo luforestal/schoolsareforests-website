@@ -22,14 +22,18 @@ export default function AuthCallback() {
       const user = session?.user
       if (!user) { router.push('/teacher'); return }
 
-      // Check if teacher already has school setup
+      // Check teacher status and school setup
       const { data: teacher } = await supabase
         .from('teachers')
-        .select('school_id')
+        .select('school_id, status')
         .eq('id', user.id)
         .single()
 
-      if (teacher?.school_id) {
+      if (!teacher) {
+        router.push('/teacher/setup')
+      } else if (teacher.status === 'pending' || teacher.status === 'rejected') {
+        router.push('/teacher/pending')
+      } else if (teacher.school_id) {
         router.push('/teacher/dashboard')
       } else {
         router.push('/teacher/setup')

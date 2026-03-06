@@ -13,16 +13,72 @@ export default function FieldSchoolPage() {
   const [inaccessibleCounts, setInaccessibleCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [accessDenied, setAccessDenied] = useState(false)
 
   useEffect(() => {
     const load = async () => {
+      // Check access: must be a teacher logged in OR have a valid session in sessionStorage
+      let allowedZoneIds = null // null = all zones allowed
+
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        // Authenticated teacher — check they belong to this school
+        const { data: teacherData } = await supabase
+          .from('teachers')
+          .select('school_id, status')
+          .eq('id', user.id)
+          .single()
+
+        const isTeacherForSchool = teacherData?.school_id === schoolId && teacherData?.status === 'approved'
+        if (!isTeacherForSchool) {
+          setAccessDenied(true)
+          setLoading(false)
+          return
+        }
+        // Teacher has access to all zones
+      } else {
+        // Unauthenticated — check for a valid session in sessionStorage
+        const raw = sessionStorage.getItem('saf_session')
+        if (!raw) {
+          router.push('/student')
+          return
+        }
+
+        let session
+        try { session = JSON.parse(raw) } catch { router.push('/student'); return }
+
+        if (session.schoolId !== schoolId) {
+          // Session is for a different school
+          router.push('/student')
+          return
+        }
+
+        if (new Date(session.expiresAt) < new Date()) {
+          // Session expired
+          setAccessDenied(true)
+          setLoading(false)
+          return
+        }
+
+        allowedZoneIds = session.zoneIds // may be null (all) or an array
+      }
+
+      // Load school
       const { data: schoolData } = await supabase
         .from('schools').select('*').eq('id', schoolId).single()
       if (!schoolData) { setNotFound(true); setLoading(false); return }
       setSchool(schoolData)
 
-      const { data: zonesData } = await supabase
+      // Load zones (filter if session restricts to certain zones)
+      let zonesQuery = supabase
         .from('zones').select('*').eq('school_id', schoolId).order('label')
+
+      if (allowedZoneIds && allowedZoneIds.length > 0) {
+        zonesQuery = zonesQuery.in('id', allowedZoneIds)
+      }
+
+      const { data: zonesData } = await zonesQuery
       setZones(zonesData || [])
 
       if (zonesData?.length) {
@@ -39,11 +95,22 @@ export default function FieldSchoolPage() {
       setLoading(false)
     }
     load()
-  }, [schoolId])
+  }, [schoolId, router])
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
       <p className="text-forest-400">Loading…</p>
+    </div>
+  )
+
+  if (accessDenied) return (
+    <div className="min-h-screen bg-forest-50 flex items-center justify-center px-6">
+      <div className="text-center">
+        <div className="text-4xl mb-4">🔒</div>
+        <h1 className="text-xl font-bold text-forest-800 mb-2">Session expired</h1>
+        <p className="text-gray-400 text-sm mb-4">Your session has expired. Ask your teacher to reopen it.</p>
+        <a href="/student" className="text-forest-600 text-sm underline">Back to entry</a>
+      </div>
     </div>
   )
 

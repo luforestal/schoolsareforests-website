@@ -121,7 +121,10 @@ export default function TeacherSetupPage() {
       setUser(user)
 
       const { data: existing } = await supabase
-        .from('teachers').select('school_id').eq('id', user.id).single()
+        .from('teachers').select('school_id, status').eq('id', user.id).single()
+      if (existing?.status === 'pending' || existing?.status === 'rejected') {
+        router.push('/teacher/pending'); return
+      }
       if (existing?.school_id) { router.push('/teacher/dashboard'); return }
 
       const { data } = await supabase.from('schools').select('id, name, location, country')
@@ -197,10 +200,11 @@ export default function TeacherSetupPage() {
       subject: subject.trim() || null,
       grade: grade.trim() || null,
       student_count: parseInt(studentCount) || null,
+      status: 'pending',
     })
 
     if (teacherError) { setError(teacherError.message); setLoading(false); return }
-    router.push('/teacher/dashboard')
+    router.push('/teacher/pending')
   }
 
   const nextStep = () => {

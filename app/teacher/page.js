@@ -27,14 +27,19 @@ export default function TeacherAuthPage() {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) { setError(signInError.message); setLoading(false); return }
 
-      // Check if teacher already has a school
+      // Check teacher status and school setup
       const { data: teacher } = await supabase
         .from('teachers')
-        .select('school_id')
+        .select('school_id, status')
         .eq('id', data.user.id)
         .single()
 
-      if (teacher?.school_id) {
+      if (!teacher) {
+        // Never completed setup
+        router.push('/teacher/setup')
+      } else if (teacher.status === 'pending' || teacher.status === 'rejected') {
+        router.push('/teacher/pending')
+      } else if (teacher.school_id) {
         router.push('/teacher/dashboard')
       } else {
         router.push('/teacher/setup')
