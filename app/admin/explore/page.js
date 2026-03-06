@@ -19,6 +19,7 @@ export default function AdminExplorePage() {
   const [loading, setLoading] = useState(true)
   const [loadingZones, setLoadingZones] = useState(false)
   const [loadingTrees, setLoadingTrees] = useState(false)
+  const [lightbox, setLightbox] = useState(null) // { photos: [], index: 0 }
 
   useEffect(() => {
     supabase.from('schools').select('id, name, country, location').order('name')
@@ -41,7 +42,7 @@ export default function AdminExplorePage() {
     setSelectedZone(zone)
     setLoadingTrees(true)
     const [{ data: treesData }, { data: vData }] = await Promise.all([
-      supabase.from('trees').select('*, tree_stems(*)').eq('zone_id', zone.id).order('id'),
+      supabase.from('trees').select('*, tree_stems(*), tree_photos(*)').eq('zone_id', zone.id).order('id'),
       supabase.from('tree_validations').select('*').eq('zone_id', zone.id),
     ])
     setTrees(treesData || [])
@@ -114,6 +115,18 @@ export default function AdminExplorePage() {
               {trees.map((tree, idx) => (
                 <div key={tree.id} className={`bg-white rounded-xl border p-4 ${validatedIds.has(tree.id) ? 'border-green-200' : 'border-gray-100'}`}>
                   <div className="flex items-start justify-between gap-3">
+                    {tree.photo_url && (() => {
+                      const allPhotos = [tree.photo_url, ...(tree.tree_photos || []).sort((a,b) => a.photo_order - b.photo_order).map(p => p.photo_url)]
+                      return (
+                        <div className="flex gap-1 flex-shrink-0">
+                          {allPhotos.slice(0, 3).map((url, pi) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={pi} src={url} alt="" onClick={() => setLightbox({ photos: allPhotos, index: pi })}
+                              className="w-14 h-14 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" />
+                          ))}
+                        </div>
+                      )
+                    })()}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
@@ -164,6 +177,37 @@ export default function AdminExplorePage() {
           )}
         </div>
       </div>
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+          onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white text-2xl font-bold w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full">✕</button>
+
+          {lightbox.photos.length > 1 && (
+            <button onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: (l.index - 1 + l.photos.length) % l.photos.length })) }}
+              className="absolute left-4 text-white text-3xl w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full">‹</button>
+          )}
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox.photos[lightbox.index]} alt="" onClick={e => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl" />
+
+          {lightbox.photos.length > 1 && (
+            <button onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: (l.index + 1) % l.photos.length })) }}
+              className="absolute right-4 text-white text-3xl w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full">›</button>
+          )}
+
+          {lightbox.photos.length > 1 && (
+            <div className="absolute bottom-4 flex gap-1.5">
+              {lightbox.photos.map((_, i) => (
+                <button key={i} onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: i })) }}
+                  className={`w-2 h-2 rounded-full transition-colors ${i === lightbox.index ? 'bg-white' : 'bg-white/40'}`} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

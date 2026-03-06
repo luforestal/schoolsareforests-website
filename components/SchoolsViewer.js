@@ -63,6 +63,7 @@ function SchoolsViewerInner() {
 
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedTree, setSelectedTree] = useState(null)
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0)
   const [filterSpecies, setFilterSpecies] = useState(null)
   const [filterHeightBin, setFilterHeightBin] = useState(null)
   const [filterHealth, setFilterHealth] = useState(null)
@@ -186,7 +187,7 @@ function SchoolsViewerInner() {
         `<strong>${sp}</strong>${tree.health_status ? `<br>● ${tree.health_status}` : ''}<br>Crown ~${(crownRadius * 2).toFixed(1)}m`,
         { direction: 'top' }
       )
-      circle.on('click', () => { setSelectedTree(tree); setActiveTab('trees'); setPanelOpen(true) })
+      circle.on('click', () => { setSelectedTree(tree); setSelectedPhotoIdx(0); setActiveTab('trees'); setPanelOpen(true) })
       treeMarkersRef.current.push(circle)
 
       // Small diamond at centroid
@@ -197,7 +198,7 @@ function SchoolsViewerInner() {
         iconAnchor: [4, 4],
       })
       const pin = L.marker([tree.lat, tree.lng], { icon: diamond, zIndexOffset: 500 }).addTo(mapRef.current)
-      pin.on('click', () => { setSelectedTree(tree); setActiveTab('trees'); setPanelOpen(true) })
+      pin.on('click', () => { setSelectedTree(tree); setSelectedPhotoIdx(0); setActiveTab('trees'); setPanelOpen(true) })
       treeMarkersRef.current.push(pin)
     })
   }, [trees])
@@ -486,7 +487,7 @@ function SchoolsViewerInner() {
               ) : activeTab === 'overview' ? (
                 <OverviewTab accessible={accessible} trees={trees} zones={zones} speciesData={speciesData} />
               ) : activeTab === 'trees' ? (
-                <TreesTab trees={trees} zones={zones} selectedTree={selectedTree} onSelect={setSelectedTree} />
+                <TreesTab trees={trees} zones={zones} selectedTree={selectedTree} onSelect={(t) => { setSelectedTree(t); setSelectedPhotoIdx(0) }} selectedPhotoIdx={selectedPhotoIdx} setSelectedPhotoIdx={setSelectedPhotoIdx} />
               ) : (
                 <ChartsTab
                   speciesData={speciesData}
@@ -593,7 +594,7 @@ function OverviewTab({ accessible, trees, zones, speciesData }) {
 
 // ─── Browse Trees tab ─────────────────────────────────────────────────────────
 
-function TreesTab({ trees, zones, selectedTree, onSelect }) {
+function TreesTab({ trees, zones, selectedTree, onSelect, selectedPhotoIdx = 0, setSelectedPhotoIdx = () => {} }) {
   const [search, setSearch] = useState('')
   const [filterZone, setFilterZone] = useState('')
   const [filterHealth, setFilterHealth] = useState('')
@@ -622,22 +623,23 @@ function TreesTab({ trees, zones, selectedTree, onSelect }) {
           ← Back to list
         </button>
 
-        {/* Main photo */}
-        {allPhotos[0] && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={allPhotos[0].url} alt="Full tree" className="w-full h-64 object-contain bg-forest-50 rounded-xl shadow-sm mb-3" />
-        )}
-
-        {/* Extra photos */}
-        {allPhotos.length > 1 && (
-          <div className="flex gap-2 mb-4">
-            {allPhotos.slice(1).map((p, i) => (
-              <div key={i} className="flex-shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt={p.label} className="h-20 w-20 object-cover rounded-lg shadow-sm" />
-                <p className="text-xs text-gray-400 text-center mt-0.5">{p.label}</p>
+        {/* Photo gallery */}
+        {allPhotos.length > 0 && (
+          <div className="mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={allPhotos[selectedPhotoIdx].url} alt={allPhotos[selectedPhotoIdx].label}
+              className="w-full h-72 object-contain bg-forest-50 rounded-xl shadow-sm mb-2" />
+            {allPhotos.length > 1 && (
+              <div className="flex gap-2">
+                {allPhotos.map((p, i) => (
+                  <button key={i} onClick={() => setSelectedPhotoIdx(i)}
+                    className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${i === selectedPhotoIdx ? 'border-forest-600 opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={p.label} className="h-16 w-16 object-cover" />
+                  </button>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
