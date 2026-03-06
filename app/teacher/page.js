@@ -35,8 +35,8 @@ export default function TeacherAuthPage() {
     if (mode === 'register') {
       const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
       if (signUpError) { setError(signUpError.message); setLoading(false); return }
-      // New user → setup school
-      router.push('/teacher/setup')
+      // New user → terms first
+      router.push('/teacher/terms')
     } else {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) { setError(signInError.message); setLoading(false); return }
@@ -49,8 +49,8 @@ export default function TeacherAuthPage() {
         .single()
 
       if (!teacher) {
-        // Never completed setup
-        router.push('/teacher/setup')
+        // Never completed setup — check if terms accepted
+        router.push('/teacher/terms')
       } else if (teacher.status === 'pending' || teacher.status === 'rejected') {
         router.push('/teacher/pending')
       } else if (teacher.school_id) {
