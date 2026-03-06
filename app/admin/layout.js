@@ -9,9 +9,12 @@ export default function AdminLayout({ children }) {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
+    // Skip auth check on the login page itself
+    if (pathname === '/admin/login') { setChecking(false); return }
+
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher'); return }
+      if (!user) { router.replace('/admin/login'); return }
 
       const { data: admin } = await supabase
         .from('admins')
@@ -19,17 +22,20 @@ export default function AdminLayout({ children }) {
         .eq('id', user.id)
         .single()
 
-      if (!admin) { router.replace('/'); return }
+      if (!admin) { router.replace('/admin/login'); return }
       setChecking(false)
     }
     check()
-  }, [router])
+  }, [router, pathname])
 
   if (checking) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <p className="text-gray-400 text-sm">Verifying admin access…</p>
     </div>
   )
+
+  // On login page, render children directly (no nav)
+  if (pathname === '/admin/login') return <>{children}</>
 
   return (
     <div className="min-h-screen bg-gray-50">
