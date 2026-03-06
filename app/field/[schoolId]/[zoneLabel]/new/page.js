@@ -104,14 +104,29 @@ export default function NewTreePage() {
     setSuggestions([]) // clear previous suggestions when photos change
   }
 
+  const compressImage = (file, maxPx = 1000, quality = 0.8) =>
+    new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality)
+      }
+      img.src = URL.createObjectURL(file)
+    })
+
   const handleIdentify = async () => {
     const available = photos.filter(Boolean)
     if (!available.length) return
     setSuggestions([])
     setIdentifying(true)
     try {
+      const compressed = await Promise.all(available.map(f => compressImage(f)))
       const formData = new FormData()
-      available.forEach(f => formData.append('images', f))
+      compressed.forEach((blob, i) => formData.append('images', blob, `photo${i}.jpg`))
       const res = await fetch('/api/identify', { method: 'POST', body: formData })
       const data = await res.json()
       if (res.ok && data.results) {
