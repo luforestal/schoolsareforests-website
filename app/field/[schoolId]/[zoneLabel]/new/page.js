@@ -55,6 +55,7 @@ export default function NewTreePage() {
   const [coords, setCoords] = useState(null)
   const [gpsStatus, setGpsStatus] = useState('idle') // 'idle' | 'capturing' | 'success' | 'error'
   const [showMapPicker, setShowMapPicker] = useState(false)
+  const [schoolLocation, setSchoolLocation] = useState(null)
 
   useEffect(() => {
     const name = sessionStorage.getItem('saf_student_name')
@@ -75,6 +76,17 @@ export default function NewTreePage() {
 
     supabase.from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
       .single().then(({ data }) => setZone(data))
+
+    supabase.from('schools').select('location, country').eq('id', schoolId)
+      .single().then(async ({ data: school }) => {
+        if (!school) return
+        try {
+          const q = encodeURIComponent(school.location || school.country)
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`)
+          const results = await res.json()
+          if (results.length > 0) setSchoolLocation({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) })
+        } catch (_) {}
+      })
   }, [schoolId, zoneLabel, router])
 
   const recaptureGPS = () => {
@@ -520,8 +532,8 @@ export default function NewTreePage() {
 
         {showMapPicker && (
           <MapPicker
-            initialLat={coords?.lat}
-            initialLng={coords?.lng}
+            initialLat={coords?.lat ?? schoolLocation?.lat}
+            initialLng={coords?.lng ?? schoolLocation?.lng}
             onConfirm={({ lat, lng }) => {
               setCoords({ lat, lng })
               setGpsStatus('success')
