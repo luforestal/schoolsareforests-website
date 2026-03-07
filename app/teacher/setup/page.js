@@ -110,6 +110,8 @@ export default function TeacherSetupPage() {
 
   // Step 3 — Class
   const [studentCount, setStudentCount] = useState('')
+  const [recZones, setRecZones] = useState(null)
+  const [recStudents, setRecStudents] = useState(null)
 
   const dialCode = COUNTRIES.find(c => c.name === selectedCountry)?.dial || ''
   const filteredSchools = allSchools.filter(s => s.country === selectedCountry)
@@ -150,10 +152,14 @@ export default function TeacherSetupPage() {
     setLogoPreview(URL.createObjectURL(file))
   }
 
-  const recommendedZones = () => {
-    const n = parseInt(studentCount)
-    if (!n || n < 1) return null
-    return Math.min(Math.max(Math.ceil(n / 5), 2), 10)
+  const handleStudentCount = (raw) => {
+    const cleaned = raw.replace(/\D/g, '')
+    setStudentCount(cleaned)
+    const n = parseInt(cleaned)
+    if (!n || n < 1) { setRecZones(null); setRecStudents(null); return }
+    const z = Math.min(Math.max(Math.ceil(n / 5), 2), 10)
+    setRecZones(z)
+    setRecStudents(Math.ceil(n / z))
   }
 
   const handleFinish = async () => {
@@ -394,21 +400,21 @@ export default function TeacherSetupPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students <span className="text-gray-400 font-normal">(optional)</span></label>
                 <input type="text" inputMode="numeric" pattern="[0-9]*"
-                  defaultValue={studentCount}
-                  onInput={e => setStudentCount(e.currentTarget.value.replace(/\D/g, ''))}
+                  onInput={e => handleStudentCount(e.currentTarget.value)}
+                  onChange={e => handleStudentCount(e.target.value)}
                   placeholder="e.g. 25"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
               </div>
-              {recommendedZones() && (
+              {recZones && (
                 <div className="bg-forest-50 border border-forest-100 rounded-xl p-5">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="text-2xl">🗺️</div>
                     <div>
                       <p className="font-semibold text-forest-800">
-                        We recommend <span className="text-forest-600">{recommendedZones()} zones</span>
+                        We recommend <span className="text-forest-600">{recZones} zones</span>
                       </p>
                       <p className="text-sm text-gray-500">
-                        ~{Math.ceil(parseInt(studentCount) / recommendedZones())} students per group
+                        ~{recStudents} students per group
                       </p>
                     </div>
                   </div>
