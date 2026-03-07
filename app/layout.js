@@ -1,7 +1,7 @@
 import { Inter } from 'next/font/google'
-import Script from 'next/script'
 import './globals.css'
 import ConditionalLayout from '@/components/ConditionalLayout'
+import { LanguageProvider } from '@/lib/i18n'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,32 +21,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-white text-gray-900`} suppressHydrationWarning>
-        <ConditionalLayout>
-          {children}
-        </ConditionalLayout>
-
-        {/* Google Translate – loads after page is interactive */}
-        <Script
-          id="google-translate-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                if (sessionStorage.getItem('saf_lang') === 'en') return;
-                new google.translate.TranslateElement({
-                  pageLanguage: 'en',
-                  includedLanguages: 'es,de',
-                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                  autoDisplay: false
-                }, 'google_translate_element');
-              }
-            `,
-          }}
-        />
-        <Script
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-          strategy="afterInteractive"
-        />
+        <LanguageProvider>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+        </LanguageProvider>
       </body>
     </html>
   )

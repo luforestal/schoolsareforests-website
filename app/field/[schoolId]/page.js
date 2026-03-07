@@ -3,10 +3,12 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 export default function FieldSchoolPage() {
   const { schoolId } = useParams()
   const router = useRouter()
+  const t = useT()
   const [school, setSchool] = useState(null)
   const [zones, setZones] = useState([])
   const [treeCounts, setTreeCounts] = useState({})
@@ -99,7 +101,7 @@ export default function FieldSchoolPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
-      <p className="text-forest-400">Loading…</p>
+      <p className="text-forest-400">{t('field.loading')}</p>
     </div>
   )
 
@@ -107,9 +109,9 @@ export default function FieldSchoolPage() {
     <div className="min-h-screen bg-forest-50 flex items-center justify-center px-6">
       <div className="text-center">
         <div className="text-4xl mb-4">🔒</div>
-        <h1 className="text-xl font-bold text-forest-800 mb-2">Session expired</h1>
-        <p className="text-gray-400 text-sm mb-4">Your session has expired. Ask your teacher to reopen it.</p>
-        <a href="/student" className="text-forest-600 text-sm underline">Back to entry</a>
+        <h1 className="text-xl font-bold text-forest-800 mb-2">{t('field.session_expired_title')}</h1>
+        <p className="text-gray-400 text-sm mb-4">{t('field.session_expired_body')}</p>
+        <a href="/student" className="text-forest-600 text-sm underline">{t('field.back_entry')}</a>
       </div>
     </div>
   )
@@ -118,8 +120,8 @@ export default function FieldSchoolPage() {
     <div className="min-h-screen bg-forest-50 flex items-center justify-center px-6">
       <div className="text-center">
         <div className="text-4xl mb-4">🌲</div>
-        <h1 className="text-xl font-bold text-forest-800 mb-2">School not found</h1>
-        <p className="text-gray-400 text-sm">Check the link your teacher shared with you.</p>
+        <h1 className="text-xl font-bold text-forest-800 mb-2">{t('field.not_found_title')}</h1>
+        <p className="text-gray-400 text-sm">{t('field.not_found_body')}</p>
       </div>
     </div>
   )
@@ -135,7 +137,7 @@ export default function FieldSchoolPage() {
             <div className="h-12 w-12 rounded-lg bg-forest-700 flex items-center justify-center text-xl flex-shrink-0">🏫</div>
           )}
           <div>
-            <p className="text-forest-300 text-xs uppercase tracking-wide">Field Inventory</p>
+            <p className="text-forest-300 text-xs uppercase tracking-wide">{t('field.inventory')}</p>
             <h1 className="text-xl font-bold">{school.name}</h1>
             {school.location && <p className="text-forest-300 text-sm">{school.location}</p>}
           </div>
@@ -143,12 +145,12 @@ export default function FieldSchoolPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-8">
-        <p className="text-gray-500 text-sm mb-5">Select your zone to start recording trees.</p>
+        <p className="text-gray-500 text-sm mb-5">{t('field.select_zone')}</p>
         {zones.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
             <div className="text-4xl mb-3">🗺️</div>
-            <p>No zones set up yet.</p>
-            <p className="text-sm mt-1">Ask your teacher to create zones first.</p>
+            <p>{t('field.no_zones')}</p>
+            <p className="text-sm mt-1">{t('field.no_zones_hint')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -166,18 +168,18 @@ export default function FieldSchoolPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-forest-800">Zone {zone.label}</p>
+                      <p className="font-semibold text-forest-800">{t('field.zone_title', { label: zone.label })}</p>
                       {zone.category && (
                         <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full">{zone.category}</span>
                       )}
                       {zone.group_number && (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Group {zone.group_number}</span>
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{t('field.group', { number: zone.group_number })}</span>
                       )}
                     </div>
                     {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-gray-500">🌳 {count} trees recorded</span>
-                      {iCount > 0 && <span className="text-xs text-amber-600">⚠️ {iCount} inaccessible</span>}
+                      <span className="text-xs text-gray-500">🌳 {count} {t('field.trees_recorded')}</span>
+                      {iCount > 0 && <span className="text-xs text-amber-600">⚠️ {iCount} {t('field.inaccessible')}</span>}
                     </div>
                   </div>
                   <span className="text-gray-300 text-xl flex-shrink-0">›</span>

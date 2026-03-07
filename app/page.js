@@ -1,9 +1,12 @@
+'use client'
 import Link from 'next/link'
 import WorldMapWrapper from '@/components/WorldMapWrapper'
 import VolunteerCard from '@/components/VolunteerCard'
 import { schools } from '@/data/schools'
+import { useT } from '@/lib/i18n'
 
 export default function HomePage() {
+  const t = useT()
   const totalTrees = schools.reduce((sum, s) => sum + s.trees, 0)
   const totalCountries = new Set(schools.map(s => s.country)).size
 
@@ -38,20 +41,20 @@ export default function HomePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Schools Are Forests" className="w-[360px] md:w-[540px] mx-auto mb-8 drop-shadow-lg" />
           <p className="text-xl md:text-2xl text-forest-900 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Mapping and celebrating the trees that grow on school campuses around the world.
+            {t('home.tagline')}
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/schools"
               className="bg-forest-800 text-white font-semibold px-8 py-3 rounded-full hover:bg-forest-900 transition-colors shadow-lg"
             >
-              Explore the Map
+              {t('home.cta_map')}
             </Link>
             <Link
               href="/about"
               className="border-2 border-forest-700 text-forest-800 font-semibold px-8 py-3 rounded-full hover:bg-forest-700 hover:text-white transition-colors"
             >
-              Learn More
+              {t('home.cta_learn')}
             </Link>
           </div>
         </div>
@@ -62,15 +65,15 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
           <div>
             <div className="text-4xl font-bold text-forest-700">{totalTrees}+</div>
-            <div className="text-gray-500 mt-1 text-sm">Trees Documented</div>
+            <div className="text-gray-500 mt-1 text-sm">{t('home.stats_trees')}</div>
           </div>
           <div>
             <div className="text-4xl font-bold text-forest-700">{schools.length}</div>
-            <div className="text-gray-500 mt-1 text-sm">Schools</div>
+            <div className="text-gray-500 mt-1 text-sm">{t('home.stats_schools')}</div>
           </div>
           <div>
             <div className="text-4xl font-bold text-forest-700">{totalCountries}</div>
-            <div className="text-gray-500 mt-1 text-sm">{totalCountries === 1 ? 'Country' : 'Countries'}</div>
+            <div className="text-gray-500 mt-1 text-sm">{totalCountries === 1 ? t('home.stats_country') : t('home.stats_countries')}</div>
           </div>
         </div>
       </section>
@@ -78,10 +81,8 @@ export default function HomePage() {
       {/* ── World Map ── */}
       <section className="py-16 px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-forest-700 text-center mb-3">Our Schools Around the World</h2>
-          <p className="text-center text-gray-500 mb-8 text-sm">
-            Hover over a dot to see school details. The map grows as new schools join.
-          </p>
+          <h2 className="text-3xl font-bold text-forest-700 text-center mb-3">{t('home.map_title')}</h2>
+          <p className="text-center text-gray-500 mb-8 text-sm">{t('home.map_hint')}</p>
           <WorldMapWrapper schools={schools} />
         </div>
       </section>
@@ -89,23 +90,16 @@ export default function HomePage() {
       {/* ── Mission ── */}
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-forest-700 mb-6">Our Mission</h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
-            Schools Are Forests is a community initiative dedicated to documenting, mapping, and
-            celebrating the trees that grow on school campuses worldwide. We believe every
-            tree tells a story — of ecological history, community care, and the living connection
-            between students and the natural world.
-          </p>
+          <h2 className="text-3xl font-bold text-forest-700 mb-6">{t('home.mission_title')}</h2>
+          <p className="text-lg text-gray-600 leading-relaxed">{t('home.mission_body')}</p>
         </div>
       </section>
 
       {/* ── Schools Grid ── */}
       <section className="py-16 px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-forest-700 text-center mb-3">Our Schools</h2>
-          <p className="text-center text-gray-500 mb-12">
-            Explore the tree inventories of our partner schools.
-          </p>
+          <h2 className="text-3xl font-bold text-forest-700 text-center mb-3">{t('home.schools_title')}</h2>
+          <p className="text-center text-gray-500 mb-12">{t('home.schools_subtitle')}</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {schools.map(school => (
               <div
@@ -124,13 +118,13 @@ export default function HomePage() {
                   <h3 className="font-semibold text-forest-800 text-base mb-1">{school.name}</h3>
                   <p className="text-gray-400 text-sm mb-1">📍 {school.location}</p>
                   <p className="text-forest-600 text-sm font-medium mb-4">
-                    🌳 {school.trees}+ trees documented
+                    🌳 {school.trees}+ {t('home.trees_documented')}
                   </p>
                   <Link
                     href={`/schools?school=${school.id}`}
                     className="block text-center bg-forest-700 text-white py-2 px-4 rounded-lg hover:bg-forest-600 transition-colors text-sm font-medium"
                   >
-                    Explore Map →
+                    {t('home.explore_map')}
                   </Link>
                 </div>
               </div>
@@ -142,31 +136,22 @@ export default function HomePage() {
       {/* ── What We Do ── */}
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-forest-700 text-center mb-12">What We Do</h2>
+          <h2 className="text-3xl font-bold text-forest-700 text-center mb-12">{t('home.what_title')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
             <div>
               <div className="text-4xl mb-4">🗺️</div>
-              <h3 className="text-xl font-semibold text-forest-700 mb-3">Interactive Maps</h3>
-              <p className="text-gray-500 leading-relaxed">
-                Every tree is precisely mapped so you can explore each school forest tree by tree
-                from anywhere in the world.
-              </p>
+              <h3 className="text-xl font-semibold text-forest-700 mb-3">{t('home.what_maps_title')}</h3>
+              <p className="text-gray-500 leading-relaxed">{t('home.what_maps_body')}</p>
             </div>
             <div>
               <div className="text-4xl mb-4">📸</div>
-              <h3 className="text-xl font-semibold text-forest-700 mb-3">Photo Inventories</h3>
-              <p className="text-gray-500 leading-relaxed">
-                Each tree is photographed and catalogued with species, health status, and
-                ecological notes.
-              </p>
+              <h3 className="text-xl font-semibold text-forest-700 mb-3">{t('home.what_photos_title')}</h3>
+              <p className="text-gray-500 leading-relaxed">{t('home.what_photos_body')}</p>
             </div>
             <div>
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold text-forest-700 mb-3">Living Data</h3>
-              <p className="text-gray-500 leading-relaxed">
-                Our inventories grow over time, tracking the evolution and health of each
-                school's green spaces.
-              </p>
+              <h3 className="text-xl font-semibold text-forest-700 mb-3">{t('home.what_data_title')}</h3>
+              <p className="text-gray-500 leading-relaxed">{t('home.what_data_body')}</p>
             </div>
           </div>
         </div>
@@ -176,35 +161,31 @@ export default function HomePage() {
       <section className="py-20 px-4 bg-forest-800 text-white">
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-3xl font-bold mb-4">Is Your School a Forest?</h2>
-            <p className="text-forest-200 text-lg leading-relaxed mb-6">
-              If you have a school tree inventory — or want to create one — we'd love to
-              feature it on our map and help your community celebrate its trees.
-              Schools from anywhere in the world are welcome.
-            </p>
+            <h2 className="text-3xl font-bold mb-4">{t('home.join_title')}</h2>
+            <p className="text-forest-200 text-lg leading-relaxed mb-6">{t('home.join_body')}</p>
             <Link
               href="/contact"
               className="bg-white text-forest-700 font-semibold px-8 py-3 rounded-full hover:bg-forest-50 transition-colors inline-block shadow-lg"
             >
-              Join Our Network →
+              {t('home.join_cta')}
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 text-center">
             <div className="bg-forest-700 rounded-xl p-5">
               <div className="text-3xl mb-2">🌍</div>
-              <p className="text-sm text-forest-200">Schools worldwide welcome</p>
+              <p className="text-sm text-forest-200">{t('home.join_worldwide')}</p>
             </div>
             <div className="bg-forest-700 rounded-xl p-5">
               <div className="text-3xl mb-2">🆓</div>
-              <p className="text-sm text-forest-200">Always free to join</p>
+              <p className="text-sm text-forest-200">{t('home.join_free')}</p>
             </div>
             <div className="bg-forest-700 rounded-xl p-5">
               <div className="text-3xl mb-2">📍</div>
-              <p className="text-sm text-forest-200">Your school on the world map</p>
+              <p className="text-sm text-forest-200">{t('home.join_map')}</p>
             </div>
             <div className="bg-forest-700 rounded-xl p-5">
               <div className="text-3xl mb-2">🤝</div>
-              <p className="text-sm text-forest-200">Full support from our team</p>
+              <p className="text-sm text-forest-200">{t('home.join_support')}</p>
             </div>
           </div>
         </div>
@@ -213,26 +194,22 @@ export default function HomePage() {
       {/* ── Support Us ── */}
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-forest-700 mb-4 text-center">Support Our Work</h2>
-          <p className="text-gray-500 text-lg leading-relaxed mb-10 text-center">
-            Schools Are Forests is a community-driven project. Your support — whether through
-            volunteering, spreading the word, or a donation — helps us document more trees and
-            reach more schools around the world.
-          </p>
+          <h2 className="text-3xl font-bold text-forest-700 mb-4 text-center">{t('home.support_title')}</h2>
+          <p className="text-gray-500 text-lg leading-relaxed mb-10 text-center">{t('home.support_subtitle')}</p>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 text-left">
               <div className="text-3xl mb-3">📣</div>
-              <h3 className="font-semibold text-forest-800 mb-2">Spread the Word</h3>
-              <p className="text-gray-500 text-sm">Share our project with schools and educators in your network.</p>
+              <h3 className="font-semibold text-forest-800 mb-2">{t('home.spread_title')}</h3>
+              <p className="text-gray-500 text-sm">{t('home.spread_body')}</p>
             </div>
             <VolunteerCard />
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 text-left flex flex-col">
               <div className="text-3xl mb-3">💚</div>
-              <h3 className="font-semibold text-forest-800 mb-2">Donate</h3>
-              <p className="text-gray-500 text-sm">Help fund field equipment, travel, and tool development.</p>
+              <h3 className="font-semibold text-forest-800 mb-2">{t('home.donate_title')}</h3>
+              <p className="text-gray-500 text-sm">{t('home.donate_body')}</p>
               <a href="https://www.paypal.com/" target="_blank" rel="noopener noreferrer"
                 className="mt-4 text-sm font-semibold text-forest-600 hover:text-forest-800 transition-colors">
-                Donate via PayPal →
+                {t('home.donate_cta')}
               </a>
             </div>
           </div>
@@ -241,7 +218,7 @@ export default function HomePage() {
               href="/contact"
               className="bg-forest-700 text-white font-semibold px-10 py-4 rounded-full hover:bg-forest-600 transition-colors text-lg shadow-lg inline-block"
             >
-              Get Involved →
+              {t('home.involved_cta')}
             </Link>
           </div>
         </div>
@@ -249,16 +226,13 @@ export default function HomePage() {
 
       {/* ── CTA ── */}
       <section className="bg-forest-700 text-white py-20 px-4 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to Explore?</h2>
-        <p className="text-forest-200 text-lg mb-8 max-w-xl mx-auto">
-          Dive into our interactive tree maps and discover the forests hiding in plain sight
-          on school campuses around the world.
-        </p>
+        <h2 className="text-3xl font-bold mb-4">{t('home.ready_title')}</h2>
+        <p className="text-forest-200 text-lg mb-8 max-w-xl mx-auto">{t('home.ready_body')}</p>
         <Link
           href="/schools"
           className="bg-white text-forest-700 font-semibold px-10 py-4 rounded-full hover:bg-forest-50 transition-colors text-lg shadow-lg inline-block"
         >
-          Explore Schools →
+          {t('home.ready_cta')}
         </Link>
       </section>
     </>

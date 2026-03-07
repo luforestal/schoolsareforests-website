@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
@@ -16,7 +16,6 @@ const PHOTO_LABELS = [
 export default function NewTreePage() {
   const { schoolId, zoneLabel } = useParams()
   const router = useRouter()
-  const fileRefs = [useRef(), useRef(), useRef()]
   const [zone, setZone] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -298,7 +297,7 @@ export default function NewTreePage() {
                     {i > 0 && <span className="text-gray-400 font-normal">(optional but helpful)</span>}
                   </p>
                   <p className="text-xs text-gray-400 mb-2">{pl.hint}</p>
-                  <label className="cursor-pointer block">
+                  <label key={previews[i] || i} className="cursor-pointer block">
                     {previews[i] ? (
                       <div className="relative rounded-xl overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -311,7 +310,7 @@ export default function NewTreePage() {
                         <span className="text-sm">{pl.label}</span>
                       </div>
                     )}
-                    <input ref={fileRefs[i]} type="file" accept="image/*" capture="environment"
+                    <input type="file" accept="image/*" capture="environment"
                       onChange={e => handlePhoto(i, e)} className="hidden" />
                   </label>
                 </div>

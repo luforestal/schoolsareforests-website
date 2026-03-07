@@ -1,14 +1,14 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 export default function ZonePage() {
   const { schoolId, zoneLabel } = useParams()
   const router = useRouter()
-  const photo1Ref = useRef()
-  const photo2Ref = useRef()
+  const t = useT()
 
   const [zone, setZone] = useState(null)
   const [trees, setTrees] = useState([])
@@ -84,7 +84,7 @@ export default function ZonePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
-      <p className="text-forest-400">Loading…</p>
+      <p className="text-forest-400">{t('field.loading')}</p>
     </div>
   )
 
@@ -97,31 +97,31 @@ export default function ZonePage() {
             <div className="w-16 h-16 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-3xl mx-auto mb-4">
               {zoneLabel}
             </div>
-            <h1 className="text-xl font-bold text-forest-800">Zone {zoneLabel}</h1>
+            <h1 className="text-xl font-bold text-forest-800">{t('field.zone_title', { label: zoneLabel })}</h1>
             {zone?.category && <p className="text-gray-400 text-sm">{zone.category}</p>}
             {zone?.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
             {zone?.group_number && (
               <span className="inline-block mt-2 text-xs bg-forest-50 text-forest-600 px-3 py-1 rounded-full font-medium">
-                Group {zone.group_number}
+                {t('field.group', { number: zone.group_number })}
               </span>
             )}
           </div>
 
           {trees.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-              <p className="text-amber-700 text-sm font-semibold">⚠️ This zone already has {trees.length} tree{trees.length > 1 ? 's' : ''} recorded.</p>
-              <p className="text-amber-600 text-xs mt-0.5">Make sure this is your zone before continuing.</p>
+              <p className="text-amber-700 text-sm font-semibold">⚠️ {t('field.already_recorded', { count: trees.length, plural: trees.length > 1 ? 's' : '' })}</p>
+              <p className="text-amber-600 text-xs mt-0.5">{t('field.check_zone')}</p>
             </div>
           )}
 
           <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Who's entering the data?</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('field.who_entering')}</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleStart()}
-              placeholder="Your name"
+              placeholder={t('field.name_placeholder')}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
               autoFocus
             />
@@ -129,11 +129,11 @@ export default function ZonePage() {
 
           <button onClick={handleStart} disabled={!name.trim()}
             className="w-full bg-forest-700 text-white font-semibold py-3 rounded-lg hover:bg-forest-600 transition-colors disabled:opacity-50">
-            Start Inventory →
+            {t('field.start')}
           </button>
           <button onClick={() => router.push(`/field/${schoolId}`)}
             className="w-full text-gray-400 text-sm mt-3 py-2 hover:text-gray-600">
-            ← Back to zones
+            {t('field.back_zones')}
           </button>
         </div>
       </div>
@@ -146,57 +146,57 @@ export default function ZonePage() {
       <div className="min-h-screen bg-forest-50">
         <div className="bg-forest-800 text-white px-4 py-5">
           <div className="max-w-lg mx-auto">
-            <h1 className="font-bold text-lg">Zone {zoneLabel} — Reference Photos</h1>
-            <p className="text-forest-300 text-sm">Step 1 of 2</p>
+            <h1 className="font-bold text-lg">{t('field.ref_photos_title', { label: zoneLabel })}</h1>
+            <p className="text-forest-300 text-sm">{t('field.ref_photos_step')}</p>
           </div>
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
           <div className="bg-forest-50 border border-forest-100 rounded-xl p-4 text-sm text-forest-700">
-            <p className="font-semibold mb-1">📸 Take 2 reference photos of your zone</p>
-            <p className="text-forest-600 text-xs">Stand at opposite corners of your zone. These photos help locate the zone again next year.</p>
+            <p className="font-semibold mb-1">📸 {t('field.ref_photos_hint')}</p>
+            <p className="text-forest-600 text-xs">{t('field.ref_photos_body')}</p>
           </div>
 
           {/* Photo 1 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className="font-semibold text-forest-800 mb-1">Photo 1 — First angle *</p>
-            <p className="text-xs text-gray-400 mb-3">Stand at one end and take a wide shot of the whole zone</p>
+            <p className="font-semibold text-forest-800 mb-1">{t('field.photo1_label')}</p>
+            <p className="text-xs text-gray-400 mb-3">{t('field.photo1_hint')}</p>
             <label className="cursor-pointer block">
               {zp1Preview ? (
                 <div className="relative rounded-xl overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={zp1Preview} alt="" className="w-full h-44 object-cover" />
-                  <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">Tap to change</span>
+                  <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">{t('field.tap_change')}</span>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
                   <span className="text-3xl mb-1">📷</span>
-                  <span className="text-sm font-medium">Take photo 1</span>
+                  <span className="text-sm font-medium">{t('field.take_photo1')}</span>
                 </div>
               )}
-              <input ref={photo1Ref} type="file" accept="image/*" capture="environment"
+              <input type="file" accept="image/*" capture="environment"
                 onChange={e => handleZonePhoto(1, e)} className="hidden" />
             </label>
           </div>
 
           {/* Photo 2 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className="font-semibold text-forest-800 mb-1">Photo 2 — Opposite angle *</p>
-            <p className="text-xs text-gray-400 mb-3">Move to the opposite side and take another wide shot</p>
+            <p className="font-semibold text-forest-800 mb-1">{t('field.photo2_label')}</p>
+            <p className="text-xs text-gray-400 mb-3">{t('field.photo2_hint')}</p>
             <label className="cursor-pointer block">
               {zp2Preview ? (
                 <div className="relative rounded-xl overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={zp2Preview} alt="" className="w-full h-44 object-cover" />
-                  <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">Tap to change</span>
+                  <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">{t('field.tap_change')}</span>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center text-gray-400 hover:border-forest-400 hover:text-forest-500 transition-colors">
                   <span className="text-3xl mb-1">📷</span>
-                  <span className="text-sm font-medium">Take photo 2</span>
+                  <span className="text-sm font-medium">{t('field.take_photo2')}</span>
                 </div>
               )}
-              <input ref={photo2Ref} type="file" accept="image/*" capture="environment"
+              <input type="file" accept="image/*" capture="environment"
                 onChange={e => handleZonePhoto(2, e)} className="hidden" />
             </label>
           </div>
@@ -204,12 +204,12 @@ export default function ZonePage() {
           <button onClick={handleSaveZonePhotos}
             disabled={!zp1File || !zp2File || savingZonePhotos}
             className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-lg">
-            {savingZonePhotos ? 'Saving…' : 'Continue to Trees →'}
+            {savingZonePhotos ? t('field.saving') : t('field.save_continue')}
           </button>
 
           <button onClick={() => setShowZonePhotos(false)}
             className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
-            Skip for now
+            {t('field.skip')}
           </button>
         </div>
       </div>
@@ -225,19 +225,19 @@ export default function ZonePage() {
       <div className="bg-forest-800 text-white px-4 py-5">
         <div className="max-w-lg mx-auto">
           <button onClick={() => router.push(`/field/${schoolId}`)} className="text-forest-300 text-sm mb-2">
-            ← Back to zones
+            {t('field.back_zones')}
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-forest-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
               {zoneLabel}
             </div>
             <div>
-              <h1 className="font-bold text-lg">Zone {zoneLabel}{zone?.category ? ` · ${zone.category}` : ''}</h1>
+              <h1 className="font-bold text-lg">{t('field.zone_title', { label: zoneLabel })}{zone?.category ? ` · ${zone.category}` : ''}</h1>
               <p className="text-forest-300 text-sm">
-                Recording as <span className="text-white font-medium">{name}</span>
+                {t('field.recording_as')} <span className="text-white font-medium">{name}</span>
                 {' · '}
                 <button onClick={() => { sessionStorage.removeItem('saf_student_name'); setStarted(false) }}
-                  className="underline text-forest-300 hover:text-white">change</button>
+                  className="underline text-forest-300 hover:text-white">{t('field.change')}</button>
               </p>
             </div>
           </div>
@@ -259,32 +259,32 @@ export default function ZonePage() {
             )}
             <button onClick={() => setShowZonePhotos(true)}
               className="text-xs text-forest-600 bg-forest-50 px-2 rounded-lg hover:bg-forest-100 flex-shrink-0">
-              Retake
+              {t('field.retake')}
             </button>
           </div>
         )}
 
         <button onClick={() => router.push(`/field/${schoolId}/${zoneLabel}/new`)}
           className="w-full bg-forest-700 text-white font-semibold py-4 rounded-xl hover:bg-forest-600 transition-colors mb-6 text-lg active:scale-[0.99]">
-          🌳 Add Tree
+          🌳 {t('field.add_tree')}
         </button>
 
         {inaccessibleTrees.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-            <p className="text-amber-700 font-semibold text-sm">⚠️ {inaccessibleTrees.length} inaccessible tree{inaccessibleTrees.length > 1 ? 's' : ''} reported</p>
-            <p className="text-amber-600 text-xs mt-1">Your teacher has been notified.</p>
+            <p className="text-amber-700 font-semibold text-sm">⚠️ {t('field.inaccessible_reported', { count: inaccessibleTrees.length, plural: inaccessibleTrees.length > 1 ? 's' : '' })}</p>
+            <p className="text-amber-600 text-xs mt-1">{t('field.teacher_notified')}</p>
           </div>
         )}
 
         {regularTrees.length > 0 && (
           <div>
-            <p className="text-gray-500 text-sm font-medium mb-3">🌳 {regularTrees.length} tree{regularTrees.length > 1 ? 's' : ''} recorded</p>
+            <p className="text-gray-500 text-sm font-medium mb-3">🌳 {regularTrees.length} {t('field.trees_recorded')}</p>
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="grid grid-cols-[2rem_1fr_3rem_3rem] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <span>#</span>
-                <span>Species</span>
-                <span className="text-center">↕ m</span>
-                <span className="text-center">Health</span>
+                <span>{t('field.species_col')}</span>
+                <span className="text-center">{t('field.height_col')}</span>
+                <span className="text-center">{t('field.health_col')}</span>
               </div>
               {regularTrees.map((tree, i) => (
                 <button key={tree.id}
@@ -293,7 +293,7 @@ export default function ZonePage() {
                   <span className="text-xs font-bold text-forest-600">{i + 1}</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-forest-800 truncate">
-                      {tree.needs_identification ? '❓ Needs ID' : (tree.species_common || '—')}
+                      {tree.needs_identification ? `❓ ${t('field.needs_id')}` : (tree.species_common || '—')}
                     </p>
                     {tree.species_scientific && (
                       <p className="text-xs text-gray-400 italic truncate">{tree.species_scientific}</p>
@@ -312,8 +312,8 @@ export default function ZonePage() {
         {trees.length === 0 && (
           <div className="text-center py-10 text-gray-400">
             <div className="text-4xl mb-3">🌱</div>
-            <p>No trees recorded yet.</p>
-            <p className="text-sm mt-1">Tap "Add Tree" to get started!</p>
+            <p>{t('field.no_trees')}</p>
+            <p className="text-sm mt-1">{t('field.no_trees_hint')}</p>
           </div>
         )}
       </div>

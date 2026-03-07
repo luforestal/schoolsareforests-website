@@ -1,57 +1,24 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const navLinks = [
-  { href: '/',        label: 'Home' },
-  { href: '/about',   label: 'About' },
-  { href: '/schools', label: 'Explore Schools' },
-  { href: '/tool',    label: 'Our Tool' },
-  { href: '/contact', label: 'Contact' },
-]
+import { useLanguage, useT } from '@/lib/i18n'
 
 const LANGS = [
   { code: 'en', label: 'EN' },
   { code: 'es', label: 'ES' },
-  { code: 'de', label: 'DE' },
 ]
 
 function LangSwitcher() {
-  const [active, setActive] = useState('en')
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem('saf_lang') || 'en'
-    setActive(saved)
-  }, [])
-
-  const switchLang = (lang) => {
-    sessionStorage.setItem('saf_lang', lang)
-    setActive(lang)
-
-    const expire = 'expires=Thu, 01 Jan 1970 00:00:00 UTC'
-    // Clear existing cookies
-    document.cookie = `googtrans=; path=/; ${expire}`
-    document.cookie = `googtrans=; path=/; domain=.${location.hostname}; ${expire}`
-
-    if (lang !== 'en') {
-      // Set translation cookie for ES or DE
-      document.cookie = `googtrans=/en/${lang}; path=/`
-      document.cookie = `googtrans=/en/${lang}; path=/; domain=.${location.hostname}`
-    }
-
-    window.location.reload()
-  }
-
+  const { lang, changeLang } = useLanguage()
   return (
     <div className="flex items-center gap-0.5">
       {LANGS.map(({ code, label }) => (
         <button
           key={code}
-          onClick={() => switchLang(code)}
-          translate="no"
+          onClick={() => changeLang(code)}
           className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-            active === code
+            lang === code
               ? 'bg-white text-forest-900'
               : 'text-forest-200 hover:text-white'
           }`}
@@ -66,12 +33,18 @@ function LangSwitcher() {
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
+  const t = useT()
+
+  const navLinks = [
+    { href: '/',        label: t('nav.home') },
+    { href: '/about',   label: t('nav.about') },
+    { href: '/schools', label: t('nav.schools') },
+    { href: '/tool',    label: t('nav.tool') },
+    { href: '/contact', label: t('nav.contact') },
+  ]
 
   return (
     <nav className="bg-forest-900 shadow-md sticky top-0 z-50">
-      {/* Hidden Google Translate widget */}
-      <div id="google_translate_element" aria-hidden="true" />
-
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
 

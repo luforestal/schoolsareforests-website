@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-const STEPS = ['About You', 'Your School', 'Your Class']
+import { useT } from '@/lib/i18n'
 
 // Countries with phone dial codes
 const COUNTRIES = [
@@ -85,6 +84,8 @@ const COUNTRIES = [
 
 export default function TeacherSetupPage() {
   const router = useRouter()
+  const t = useT()
+  const STEPS = [t('setup.step_you'), t('setup.step_school'), t('setup.step_class')]
   const [step, setStep] = useState(1)
   const [user, setUser] = useState(null)
   const [allSchools, setAllSchools] = useState([])
@@ -215,13 +216,13 @@ export default function TeacherSetupPage() {
 
   const nextStep = () => {
     setError('')
-    if (step === 1 && !name.trim()) { setError('Please enter your name.'); return }
+    if (step === 1 && !name.trim()) { setError(t('setup.err_name')); return }
     if (step === 2) {
-      if (!selectedCountry) { setError('Please select your country.'); return }
-      if (!schoolId) { setError('Please select or register your school.'); return }
+      if (!selectedCountry) { setError(t('setup.err_country')); return }
+      if (!schoolId) { setError(t('setup.err_school')); return }
       if (schoolId === '__new__') {
-        if (!newSchoolName.trim()) { setError('Please enter the school name.'); return }
-        if (!newSchoolCity.trim()) { setError('Please enter the city.'); return }
+        if (!newSchoolName.trim()) { setError(t('setup.err_school_name')); return }
+        if (!newSchoolCity.trim()) { setError(t('setup.err_city')); return }
       }
     }
     if (step === 3) { handleFinish(); return }
@@ -258,31 +259,31 @@ export default function TeacherSetupPage() {
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-forest-800 mb-1">About You</h2>
-                <p className="text-gray-400 text-sm">Tell us a bit about yourself</p>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">{t('setup.you_title')}</h2>
+                <p className="text-gray-400 text-sm">{t('setup.you_subtitle')}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.name_label')} *</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="Ms. García"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.subject_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                   <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
-                    placeholder="e.g. Science"
+                    placeholder={t('setup.subject_placeholder')}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.grade_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                   <input type="text" value={grade} onChange={e => setGrade(e.target.value)}
-                    placeholder="e.g. 4th"
+                    placeholder={t('setup.grade_placeholder')}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-500">
-                Signed in as <span className="font-medium text-gray-700">{user?.email}</span>
+                {t('setup.signed_as')} <span className="font-medium text-gray-700">{user?.email}</span>
               </div>
             </div>
           )}
@@ -291,16 +292,16 @@ export default function TeacherSetupPage() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-forest-800 mb-1">Your School</h2>
-                <p className="text-gray-400 text-sm">Find your school or register a new one</p>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">{t('setup.school_title')}</h2>
+                <p className="text-gray-400 text-sm">{t('setup.school_subtitle')}</p>
               </div>
 
               {/* Country first */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.country_label')} *</label>
                 <select value={selectedCountry} onChange={e => setSelectedCountry(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white">
-                  <option value="">Select your country…</option>
+                  <option value="">{t('setup.country_placeholder')}</option>
                   {COUNTRIES.map(c => (
                     <option key={c.code} value={c.name}>{c.name}</option>
                   ))}
@@ -311,17 +312,19 @@ export default function TeacherSetupPage() {
               {selectedCountry && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    School {filteredSchools.length > 0 ? `(${filteredSchools.length} found in ${selectedCountry})` : `in ${selectedCountry}`}
+                    {filteredSchools.length > 0
+                      ? t('setup.school_found', { count: filteredSchools.length, country: selectedCountry })
+                      : t('setup.school_in', { country: selectedCountry })}
                   </label>
                   <select value={schoolId} onChange={e => setSchoolId(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white">
                     <option value="">
-                      {filteredSchools.length > 0 ? 'Choose your school…' : 'No schools registered yet'}
+                      {filteredSchools.length > 0 ? t('setup.school_choose') : t('setup.school_none')}
                     </option>
                     {filteredSchools.map(s => (
                       <option key={s.id} value={s.id}>{s.name} — {s.location}</option>
                     ))}
-                    <option value="__new__">+ Register my school</option>
+                    <option value="__new__">{t('setup.school_register')}</option>
                   </select>
                 </div>
               )}
@@ -329,36 +332,36 @@ export default function TeacherSetupPage() {
               {/* New school form */}
               {schoolId === '__new__' && (
                 <div className="space-y-4 bg-forest-50 rounded-xl p-4 border border-forest-100">
-                  <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide">Register New School</p>
+                  <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide">{t('setup.new_school_title')}</p>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">School Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.school_name_label')} *</label>
                     <input type="text" value={newSchoolName} onChange={e => setNewSchoolName(e.target.value)}
-                      placeholder="Lincoln Elementary School"
+                      placeholder={t('setup.school_name_placeholder')}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address <span className="text-gray-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.address_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                     <input type="text" value={newSchoolAddress} onChange={e => setNewSchoolAddress(e.target.value)}
-                      placeholder="123 Oak Street"
+                      placeholder={t('setup.address_placeholder')}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.city_label')} *</label>
                       <input type="text" value={newSchoolCity} onChange={e => setNewSchoolCity(e.target.value)}
-                        placeholder="Berlin"
+                        placeholder={t('setup.city_placeholder')}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        State / Region / Department <span className="text-gray-400 font-normal">(optional)</span>
+                        {t('setup.region_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span>
                       </label>
                       <input type="text" value={newSchoolRegion} onChange={e => setNewSchoolRegion(e.target.value)}
-                        placeholder="e.g. California, Cundinamarca, Bayern"
+                        placeholder={t('setup.region_placeholder')}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code <span className="text-gray-400 font-normal">(optional)</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.postal_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                       <input type="text" value={newSchoolPostal} onChange={e => setNewSchoolPostal(e.target.value)}
                         placeholder="10115"
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
@@ -366,21 +369,21 @@ export default function TeacherSetupPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone <span className="text-gray-400 font-normal">(optional, code pre-filled)</span>
+                      {t('setup.phone_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span>
                     </label>
                     <input type="tel" value={newSchoolPhone} onChange={e => setNewSchoolPhone(e.target.value)}
                       placeholder={`${dialCode} 30 12345678`}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">School Logo <span className="text-gray-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.logo_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                     <div className="flex items-center gap-4">
                       {logoPreview && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={logoPreview} alt="Logo preview" className="h-14 w-14 object-contain rounded-lg border border-gray-200 bg-white p-1" />
                       )}
                       <label className="cursor-pointer bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                        {logoFile ? logoFile.name : 'Choose image…'}
+                        {logoFile ? logoFile.name : t('setup.logo_choose')}
                         <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
                       </label>
                     </div>
@@ -394,15 +397,15 @@ export default function TeacherSetupPage() {
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-forest-800 mb-1">Your Class</h2>
-                <p className="text-gray-400 text-sm">Help us recommend the right setup for your students</p>
+                <h2 className="text-xl font-bold text-forest-800 mb-1">{t('setup.class_title')}</h2>
+                <p className="text-gray-400 text-sm">{t('setup.class_subtitle')}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('setup.students_label')} <span className="text-gray-400 font-normal">{t('common.optional')}</span></label>
                 <input type="text" inputMode="numeric" pattern="[0-9]*"
                   onInput={e => handleStudentCount(e.currentTarget.value)}
                   onChange={e => handleStudentCount(e.target.value)}
-                  placeholder="e.g. 25"
+                  placeholder={t('setup.students_placeholder')}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
               </div>
               {recZones && (
@@ -411,14 +414,14 @@ export default function TeacherSetupPage() {
                     <div className="text-2xl">🗺️</div>
                     <div>
                       <p className="font-semibold text-forest-800">
-                        We recommend <span className="text-forest-600">{recZones} zones</span>
+                        {t('setup.rec_zones', { zones: recZones })}
                       </p>
                       <p className="text-sm text-gray-500">
-                        ~{recStudents} students per group
+                        {t('setup.rec_students', { count: recStudents })}
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400">You can always add or remove zones later from your dashboard.</p>
+                  <p className="text-xs text-gray-400">{t('setup.rec_hint')}</p>
                 </div>
               )}
             </div>
@@ -432,12 +435,12 @@ export default function TeacherSetupPage() {
             {step > 1 && (
               <button onClick={() => { setStep(s => s - 1); setError('') }}
                 className="flex-1 border border-gray-200 text-gray-500 font-semibold py-3 rounded-lg hover:bg-gray-50 transition-colors">
-                ← Back
+                {t('common.back')}
               </button>
             )}
             <button onClick={nextStep} disabled={loading}
               className="flex-1 bg-forest-700 text-white font-semibold py-3 rounded-lg hover:bg-forest-600 transition-colors disabled:opacity-50">
-              {loading ? 'Saving…' : step === 3 ? 'Go to Dashboard →' : 'Next →'}
+              {loading ? t('setup.saving') : step === 3 ? t('setup.finish') : t('setup.next')}
             </button>
           </div>
         </div>

@@ -3,9 +3,11 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 export default function TeacherAuthPage() {
   const router = useRouter()
+  const t = useT()
   const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -69,8 +71,8 @@ export default function TeacherAuthPage() {
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Schools Are Forests" className="h-12 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-forest-800">Teacher Portal</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage your school's tree inventory</p>
+          <h1 className="text-2xl font-bold text-forest-800">{t('teacher.portal_title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('teacher.portal_subtitle')}</p>
         </div>
 
         {/* Toggle — only show for login/register, not forgot */}
@@ -82,7 +84,7 @@ export default function TeacherAuthPage() {
                 mode === 'login' ? 'bg-forest-700 text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Sign In
+              {t('teacher.sign_in')}
             </button>
             <button
               onClick={() => { setMode('register'); setError(''); setMessage('') }}
@@ -90,7 +92,7 @@ export default function TeacherAuthPage() {
                 mode === 'register' ? 'bg-forest-700 text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Create Account
+              {t('teacher.register')}
             </button>
           </div>
         )}
@@ -99,8 +101,8 @@ export default function TeacherAuthPage() {
         {mode === 'forgot' ? (
           <form onSubmit={handleForgot} className="space-y-4">
             <div>
-              <p className="text-gray-500 text-sm mb-4">Enter your email and we'll send you a reset link.</p>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <p className="text-gray-500 text-sm mb-4">{t('teacher.forgot_subtitle')}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('teacher.email')}</label>
               <input
                 type="email"
                 required
@@ -114,18 +116,18 @@ export default function TeacherAuthPage() {
             {message && <p className="text-green-600 text-sm bg-green-50 rounded-lg px-4 py-2">{message}</p>}
             <button type="submit" disabled={loading}
               className="w-full bg-forest-700 text-white font-semibold py-3 rounded-lg hover:bg-forest-600 transition-colors disabled:opacity-50">
-              {loading ? 'Sending…' : 'Send reset link'}
+              {loading ? t('teacher.sending') : t('teacher.send_reset')}
             </button>
             <button type="button" onClick={() => { setMode('login'); setError(''); setMessage('') }}
               className="w-full text-gray-400 text-sm hover:text-gray-600 transition-colors py-1">
-              ← Back to sign in
+              {t('teacher.back_signin')}
             </button>
           </form>
         ) : (
           /* Login / Register form */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('teacher.email')}</label>
               <input
                 type="email"
                 required
@@ -136,7 +138,7 @@ export default function TeacherAuthPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('teacher.password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}

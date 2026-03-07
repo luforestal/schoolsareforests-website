@@ -3,9 +3,11 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 export default function TeacherPendingPage() {
   const router = useRouter()
+  const t = useT()
   const [teacher, setTeacher] = useState(null)
   const [checking, setChecking] = useState(true)
 
@@ -41,7 +43,7 @@ export default function TeacherPendingPage() {
 
   if (checking) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
-      <p className="text-forest-400">Checking status…</p>
+      <p className="text-forest-400">{t('pending.checking')}</p>
     </div>
   )
 
@@ -54,41 +56,34 @@ export default function TeacherPendingPage() {
 
         {isRejected ? (
           <>
-            <h1 className="text-2xl font-bold text-red-700 mb-2">Account not approved</h1>
-            <p className="text-gray-500 text-sm mb-4">
-              Unfortunately, we could not verify your account as a teacher at this time.
-            </p>
+            <h1 className="text-2xl font-bold text-red-700 mb-2">{t('pending.rejected_title')}</h1>
+            <p className="text-gray-500 text-sm mb-4">{t('pending.rejected_body')}</p>
             {teacher?.rejection_reason && (
               <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-5 text-left">
-                <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">Reason</p>
+                <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">{t('pending.reason_label')}</p>
                 <p className="text-sm text-red-700">{teacher.rejection_reason}</p>
               </div>
             )}
             <p className="text-gray-400 text-xs mb-6">
-              If you think this is a mistake, please contact us at{' '}
-              <a href="/contact" className="text-forest-600 underline">our contact page</a>.
+              {t('pending.contact_hint')}{' '}
+              <a href="/contact" className="text-forest-600 underline">{t('pending.contact_link')}</a>.
             </p>
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-forest-800 mb-2">
-              Account pending approval
-            </h1>
+            <h1 className="text-2xl font-bold text-forest-800 mb-2">{t('pending.pending_title')}</h1>
             <p className="text-gray-500 text-sm mb-4">
-              Hi{teacher?.name ? ` ${teacher.name}` : ''}! Your account has been received and is waiting
-              for our team to verify that you are a real teacher.
+              {t('pending.pending_body', { name: teacher?.name ? ` ${teacher.name}` : '' })}
             </p>
             <div className="bg-forest-50 border border-forest-100 rounded-xl px-4 py-3 mb-5 text-left">
-              <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide mb-1">What happens next?</p>
+              <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide mb-1">{t('pending.next_title')}</p>
               <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                <li>Our team reviews your registration</li>
-                <li>You receive confirmation (usually within 24–48 hours)</li>
-                <li>Sign in again to access your dashboard</li>
+                <li>{t('pending.next_1')}</li>
+                <li>{t('pending.next_2')}</li>
+                <li>{t('pending.next_3')}</li>
               </ol>
             </div>
-            <p className="text-gray-400 text-xs mb-6">
-              Already got confirmed? Try signing in again — if approved, you will be redirected automatically.
-            </p>
+            <p className="text-gray-400 text-xs mb-6">{t('pending.already')}</p>
           </>
         )}
 
@@ -96,7 +91,7 @@ export default function TeacherPendingPage() {
           onClick={handleSignOut}
           className="w-full border border-gray-200 text-gray-500 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
         >
-          Sign out
+          {t('pending.sign_out')}
         </button>
       </div>
     </div>
