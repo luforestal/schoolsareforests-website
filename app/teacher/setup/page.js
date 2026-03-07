@@ -393,8 +393,8 @@ export default function TeacherSetupPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Number of Students <span className="text-gray-400 font-normal">(optional)</span></label>
-                <input type="number" min="1" value={studentCount}
-                  onChange={e => setStudentCount(e.target.value)}
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={studentCount}
+                  onChange={e => setStudentCount(e.target.value.replace(/\D/g, ''))}
                   placeholder="e.g. 25"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
               </div>
