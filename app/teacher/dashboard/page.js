@@ -78,7 +78,7 @@ export default function TeacherDashboard() {
       .eq('id', user.id)
       .single()
 
-    if (!teacherData) { router.push('/teacher/setup'); return }
+    if (!teacherData) { router.push('/teacher/terms'); return }
 
     // Block unapproved teachers
     if (teacherData.status === 'pending' || teacherData.status === 'rejected') {

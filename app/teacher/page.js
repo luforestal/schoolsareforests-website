@@ -33,7 +33,7 @@ export default function TeacherAuthPage() {
     setError('')
 
     if (mode === 'register') {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/teacher/terms` } })
       if (signUpError) { setError(signUpError.message); setLoading(false); return }
       // New user → terms first
       router.push('/teacher/terms')
