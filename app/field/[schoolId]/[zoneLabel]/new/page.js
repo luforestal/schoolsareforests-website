@@ -29,12 +29,16 @@ export default function NewTreePage() {
   const [speciesScientific, setSpeciesScientific] = useState('')
   const [needsId, setNeedsId] = useState(false)
 
-  // Height & crown
+  // Units
+  const [useMetric, setUseMetric] = useState(true)
+  const [measureCircumference, setMeasureCircumference] = useState(false)
+
+  // Height & crown (always stored in m internally)
   const [height, setHeight] = useState('')
   const [crownNS, setCrownNS] = useState('')
   const [crownEW, setCrownEW] = useState('')
 
-  // Stems
+  // Stems (diameter always stored in cm internally)
   const [isMultistem, setIsMultistem] = useState(false)
   const [stems, setStems] = useState([{ diameter: '', measureHeight: '1.3' }])
 
@@ -55,6 +59,14 @@ export default function NewTreePage() {
   const [gpsStatus, setGpsStatus] = useState('idle') // 'idle' | 'capturing' | 'success' | 'error'
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [schoolLocation, setSchoolLocation] = useState(null)
+
+  // Unit conversion helpers — DB always stores metric
+  const toMetricLen = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 0.3048   // ft → m
+  const toMetricDiam = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 2.54    // in → cm
+  const lenUnit = useMetric ? 'm' : 'ft'
+  const diamUnit = useMetric ? 'cm' : 'in'
+  const lenStep = useMetric ? '0.1' : '0.5'
+  const diamStep = useMetric ? '0.1' : '0.1'
 
   useEffect(() => {
     const name = sessionStorage.getItem('saf_student_name')
@@ -203,9 +215,9 @@ export default function NewTreePage() {
       recorded_by: recordedBy,
       species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
       species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
-      height_m: inaccessible ? null : parseFloat(height),
-      crown_ns_m: inaccessible ? null : parseFloat(crownNS),
-      crown_ew_m: inaccessible ? null : parseFloat(crownEW),
+      height_m: inaccessible ? null : toMetricLen(height),
+      crown_ns_m: inaccessible ? null : toMetricLen(crownNS),
+      crown_ew_m: inaccessible ? null : toMetricLen(crownEW),
       is_multistem: inaccessible ? false : isMultistem,
       health_status: inaccessible ? null : health,
       photo_url: uploadedUrls[0] || null,
@@ -237,8 +249,12 @@ export default function NewTreePage() {
         activeStems.map((s, i) => ({
           tree_id: treeData.id,
           stem_number: i + 1,
-          diameter_cm: parseFloat(s.diameter),
-          measurement_height_m: parseFloat(s.measureHeight),
+          diameter_cm: (() => {
+            const raw = parseFloat(s.diameter)
+            const asCm = toMetricDiam(raw)
+            return measureCircumference ? asCm / Math.PI : asCm
+          })(),
+          measurement_height_m: toMetricLen(s.measureHeight),
         }))
       )
     }
@@ -394,39 +410,63 @@ export default function NewTreePage() {
               )}
             </div>
 
+            {/* Unit toggle */}
+            <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+              <span className="text-sm font-medium text-gray-600">Measurement units</span>
+              <div className="flex rounded-lg overflow-hidden border border-gray-200">
+                <button type="button" onClick={() => setUseMetric(true)}
+                  className={`px-4 py-1.5 text-sm font-semibold transition-colors ${useMetric ? 'bg-forest-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                  Metric
+                </button>
+                <button type="button" onClick={() => setUseMetric(false)}
+                  className={`px-4 py-1.5 text-sm font-semibold transition-colors ${!useMetric ? 'bg-forest-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                  Imperial
+                </button>
+              </div>
+            </div>
+
             {/* 3. Height & Crown */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
               <div>
                 <label className="block font-semibold text-forest-800 mb-1">Height *</label>
-                <p className="text-xs text-gray-400 mb-2">Total tree height in meters</p>
+                <p className="text-xs text-gray-400 mb-2">Total tree height in {lenUnit}</p>
                 <div className="flex items-center gap-2">
-                  <input type="number" step="0.1" min="0" value={height} onChange={e => setHeight(e.target.value)}
-                    placeholder="e.g. 8.5"
+                  <input type="number" step={lenStep} min="0" value={height} onChange={e => setHeight(e.target.value)}
+                    placeholder={useMetric ? 'e.g. 8.5' : 'e.g. 28'}
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                  <span className="text-gray-500 font-medium">m</span>
+                  <span className="text-gray-500 font-medium w-6">{lenUnit}</span>
                 </div>
+                {!useMetric && height && (
+                  <p className="text-xs text-gray-400 mt-1">≈ {(parseFloat(height) * 0.3048).toFixed(2)} m</p>
+                )}
               </div>
               <div>
                 <label className="block font-semibold text-forest-800 mb-1">Crown diameter *</label>
-                <p className="text-xs text-gray-400 mb-2">Measure in two directions in meters</p>
+                <p className="text-xs text-gray-400 mb-2">Measure in two directions ({lenUnit})</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">North–South</label>
                     <div className="flex items-center gap-1">
-                      <input type="number" step="0.1" min="0" value={crownNS} onChange={e => setCrownNS(e.target.value)}
-                        placeholder="e.g. 5.0"
+                      <input type="number" step={lenStep} min="0" value={crownNS} onChange={e => setCrownNS(e.target.value)}
+                        placeholder={useMetric ? '5.0' : '16'}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                      <span className="text-gray-400 text-xs">m</span>
+                      <span className="text-gray-400 text-xs">{lenUnit}</span>
                     </div>
+                    {!useMetric && crownNS && (
+                      <p className="text-xs text-gray-400 mt-0.5">≈ {(parseFloat(crownNS) * 0.3048).toFixed(2)} m</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">West–East</label>
                     <div className="flex items-center gap-1">
-                      <input type="number" step="0.1" min="0" value={crownEW} onChange={e => setCrownEW(e.target.value)}
-                        placeholder="e.g. 4.5"
+                      <input type="number" step={lenStep} min="0" value={crownEW} onChange={e => setCrownEW(e.target.value)}
+                        placeholder={useMetric ? '4.5' : '15'}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                      <span className="text-gray-400 text-xs">m</span>
+                      <span className="text-gray-400 text-xs">{lenUnit}</span>
                     </div>
+                    {!useMetric && crownEW && (
+                      <p className="text-xs text-gray-400 mt-0.5">≈ {(parseFloat(crownEW) * 0.3048).toFixed(2)} m</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -434,9 +474,25 @@ export default function NewTreePage() {
 
             {/* 4. Diameter */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="font-semibold text-forest-800 mb-1">Trunk Diameter *</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-semibold text-forest-800">Trunk measurement *</p>
+                {/* Diameter vs Circumference toggle */}
+                <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
+                  <button type="button" onClick={() => setMeasureCircumference(false)}
+                    className={`px-3 py-1.5 font-semibold transition-colors ${!measureCircumference ? 'bg-forest-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                    Diameter
+                  </button>
+                  <button type="button" onClick={() => setMeasureCircumference(true)}
+                    className={`px-3 py-1.5 font-semibold transition-colors ${measureCircumference ? 'bg-forest-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                    Circumference
+                  </button>
+                </div>
+              </div>
               <p className="text-xs text-gray-400 mb-3">
-                {isMultistem ? 'Diameter and measurement height for each stem' : 'Diameter at breast height (DBH) — measured at 1.3m from the ground'}
+                {measureCircumference
+                  ? `Wrap the tape around the trunk at 1.3${lenUnit === 'm' ? 'm' : ' ft'} — enter the full circumference`
+                  : isMultistem ? `Diameter and measurement height for each stem (${diamUnit})`
+                  : `Diameter at breast height (DBH) — at 1.3${lenUnit === 'm' ? 'm' : ' ft'} from the ground (${diamUnit})`}
               </p>
               <label className="flex items-center gap-2 mb-4 cursor-pointer">
                 <input type="checkbox" checked={isMultistem}
@@ -449,16 +505,28 @@ export default function NewTreePage() {
                   <div key={i} className="flex items-end gap-2">
                     {isMultistem && <span className="text-xs font-bold text-forest-600 w-12 flex-shrink-0 pb-3">Stem {i + 1}</span>}
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-500 mb-1">Diameter (cm)</label>
-                      <input type="number" step="0.1" min="0" value={stem.diameter}
-                        onChange={e => updateStem(i, 'diameter', e.target.value)} placeholder="e.g. 25.4"
+                      <label className="block text-xs text-gray-500 mb-1">
+                        {measureCircumference ? `Circumference (${diamUnit})` : `Diameter (${diamUnit})`}
+                      </label>
+                      <input type="number" step={diamStep} min="0" value={stem.diameter}
+                        onChange={e => updateStem(i, 'diameter', e.target.value)}
+                        placeholder={measureCircumference ? (useMetric ? 'e.g. 80' : 'e.g. 31') : (useMetric ? 'e.g. 25.4' : 'e.g. 10')}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      {stem.diameter && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {measureCircumference
+                            ? <>diameter ≈ <strong>{(toMetricDiam(parseFloat(stem.diameter)) / Math.PI).toFixed(1)} cm</strong></>
+                            : !useMetric
+                              ? <>≈ {(parseFloat(stem.diameter) * 2.54).toFixed(1)} cm</>
+                              : null}
+                        </p>
+                      )}
                     </div>
                     {isMultistem && (
                       <div className="flex-1">
-                        <label className="block text-xs text-gray-500 mb-1">Measured at (m)</label>
-                        <input type="number" step="0.1" min="0" value={stem.measureHeight}
-                          onChange={e => updateStem(i, 'measureHeight', e.target.value)} placeholder="1.3"
+                        <label className="block text-xs text-gray-500 mb-1">Measured at ({lenUnit})</label>
+                        <input type="number" step={lenStep} min="0" value={stem.measureHeight}
+                          onChange={e => updateStem(i, 'measureHeight', e.target.value)} placeholder={useMetric ? '1.3' : '4.3'}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                       </div>
                     )}
