@@ -890,16 +890,15 @@ export default function TeacherDashboard() {
             {locationMethod === 'kml' && (
               <div className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="bg-amber-50 rounded-xl p-4 mb-4 text-sm text-amber-800 space-y-1.5">
-                  <p className="font-semibold mb-2">How to create and export a KML from Google Earth:</p>
-                  <p>1. Open <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-amber-900">Google Earth</a> in your browser</p>
-                  <p>2. Search for your school using the search bar</p>
-                  <p>3. In the left panel, click <strong>New Project</strong> → <strong>Create KML file</strong></p>
-                  <p>4. Click <strong>New Feature</strong> → <strong>Draw polygon</strong></p>
-                  <p>5. Click around the perimeter of your school to trace the boundary — close the shape by clicking the first point again</p>
-                  <p>6. Give the polygon a name (e.g. "School boundary") and click <strong>Save</strong></p>
-                  <p>7. In the left panel, click the three dots next to your project → <strong>Export as KML file</strong></p>
-                  <p>8. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
-                  <p className="text-amber-600 text-xs mt-2">No Google Earth account? Use <a href="https://mymaps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google My Maps</a> — draw a polygon, then Export → KML.</p>
+                  <p className="font-semibold mb-2">How to draw your school boundary in <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900">Google Earth</a>:</p>
+                  <p>1. Open Google Earth and search for your school</p>
+                  <p>2. Click <strong>+ New</strong> in the left panel, then <strong>New map</strong></p>
+                  <p>3. Click the <strong>draw line</strong> icon (the one with dots) in the toolbar</p>
+                  <p>4. Click around the perimeter of your school to trace the boundary — double-click to finish</p>
+                  <p>5. Click <strong>Save to project</strong></p>
+                  <p>6. In the left panel, click the project name to rename it if you like</p>
+                  <p>7. Click the <strong>three dots</strong> next to the project → <strong>Download</strong> → <strong>Download KML</strong></p>
+                  <p>8. Upload the downloaded file here</p>
                 </div>
                 <label className="block cursor-pointer">
                   <div className={`border-2 border-dashed rounded-xl px-4 py-6 text-center transition-colors ${kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'}`}>
