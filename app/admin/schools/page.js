@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 
 export default function AdminSchoolsPage() {
   const [schools, setSchools] = useState([])
@@ -87,7 +88,13 @@ export default function AdminSchoolsPage() {
                   </div>
                 </div>
 
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex flex-col gap-2 items-end">
+                  <Link
+                    href={`/admin/schools/${school.id}`}
+                    className="text-xs font-semibold bg-forest-600 text-white px-3 py-1.5 rounded-lg hover:bg-forest-700 transition-colors"
+                  >
+                    View →
+                  </Link>
                   {schoolTeachers.length > 0 && (
                     <button
                       onClick={() => { setTransferring(school); setNewOwnerId('') }}

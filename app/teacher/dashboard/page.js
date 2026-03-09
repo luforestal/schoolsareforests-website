@@ -66,6 +66,14 @@ export default function TeacherDashboard() {
   const [sessionLoading, setSessionLoading] = useState(false)
   const [copiedSession, setCopiedSession] = useState(false)
 
+  // Manual tree entry state
+  const [manualZoneId, setManualZoneId] = useState('')
+  const [manualForm, setManualForm] = useState({ species: '', height: '', crown: '', trunk: '', health: 'healthy', inaccessible: false, notes: '' })
+  const [manualPhoto, setManualPhoto] = useState(null)
+  const [manualPhotoPreview, setManualPhotoPreview] = useState(null)
+  const [manualSubmitting, setManualSubmitting] = useState(false)
+  const [manualRecentTrees, setManualRecentTrees] = useState([])
+
   // Location state
   const [locationMethod, setLocationMethod] = useState('coords') // 'coords' | 'kml'
   const [coordInput, setCoordInput] = useState('')
@@ -422,11 +430,52 @@ export default function TeacherDashboard() {
   // The most recent session for the "reactivate" option
   const lastSession = sessions.find(s => !s.is_active || isExpired(s.expires_at))
 
+  const submitManualTree = async () => {
+    if (!manualZoneId) return alert('Select a zone first.')
+    setManualSubmitting(true)
+    const { data: tree, error } = await supabase.from('trees').insert({
+      school_id: school.id,
+      zone_id: manualZoneId,
+      species: manualForm.species || null,
+      height_m: manualForm.height ? parseFloat(manualForm.height) : null,
+      crown_diameter_m: manualForm.crown ? parseFloat(manualForm.crown) : null,
+      trunk_diameter_cm: manualForm.trunk ? parseFloat(manualForm.trunk) : null,
+      health: manualForm.health || null,
+      inaccessible: manualForm.inaccessible,
+      notes: manualForm.notes || null,
+      submitted_by: teacher?.name || 'Teacher',
+    }).select().single()
+
+    if (error) { alert('Error saving tree: ' + error.message); setManualSubmitting(false); return }
+
+    if (manualPhoto && tree) {
+      const ext = manualPhoto.name.split('.').pop()
+      const path = `${school.id}/${tree.id}.${ext}`
+      const { data: uploadData } = await supabase.storage.from('tree-photos').upload(path, manualPhoto, { upsert: true })
+      if (uploadData) {
+        const { data: { publicUrl } } = supabase.storage.from('tree-photos').getPublicUrl(path)
+        await supabase.from('trees').update({ photo_url: publicUrl }).eq('id', tree.id)
+      }
+    }
+
+    const zoneName = zones.find(z => z.id === manualZoneId)?.label || '?'
+    setManualRecentTrees(prev => [
+      { ...tree, zoneLabel: zoneName, photoPreview: manualPhotoPreview },
+      ...prev.slice(0, 4),
+    ])
+    setManualForm({ species: '', height: '', crown: '', trunk: '', health: 'healthy', inaccessible: false, notes: '' })
+    setManualPhoto(null)
+    setManualPhotoPreview(null)
+    setManualSubmitting(false)
+    loadData()
+  }
+
   const TABS = [
     { id: 'use', label: 'How to Use' },
     { id: 'location', label: 'Location' },
     { id: 'zones', label: 'Zones' },
     { id: 'validation', label: 'Validation' },
+    { id: 'manual', label: 'Add Trees' },
   ]
 
   return (
@@ -950,6 +999,214 @@ export default function TeacherDashboard() {
               className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50">
               {savingLocation ? 'Saving…' : locationSaved ? '✓ Location saved!' : 'Save Location'}
             </button>
+          </div>
+        )}
+
+        {/* ── ADD TREES (manual entry) ── */}
+        {activeTab === 'manual' && (
+          <div className="space-y-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3">
+              <span className="text-2xl shrink-0">📄</span>
+              <div>
+                <p className="font-semibold text-amber-800 text-sm">Manual data entry</p>
+                <p className="text-amber-700 text-xs mt-0.5 leading-relaxed">
+                  Use this tab to enter tree data collected on paper or by volunteers — one tree at a time. All data is saved directly to this school's inventory.
+                </p>
+              </div>
+            </div>
+
+            {/* Zone selector */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Zone</label>
+              <select
+                value={manualZoneId}
+                onChange={e => setManualZoneId(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+              >
+                <option value="">Select zone…</option>
+                {zones.map(z => (
+                  <option key={z.id} value={z.id}>Zone {z.label} — {z.location_type || 'No type'} (Group {z.group_number || '?'})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Form */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="bg-forest-700 text-white px-5 py-3">
+                <p className="font-semibold text-sm">Tree measurements</p>
+              </div>
+              <div className="p-5 grid sm:grid-cols-2 gap-5">
+                {/* Species */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Species</label>
+                  <input
+                    type="text"
+                    value={manualForm.species}
+                    onChange={e => setManualForm(f => ({ ...f, species: e.target.value }))}
+                    placeholder="e.g. Ficus benjamina, Mango tree…"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
+
+                {/* Height */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Height (m)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={manualForm.height}
+                    onChange={e => setManualForm(f => ({ ...f, height: e.target.value }))}
+                    placeholder="e.g. 8.5"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
+
+                {/* Crown */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Crown diameter (m)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={manualForm.crown}
+                    onChange={e => setManualForm(f => ({ ...f, crown: e.target.value }))}
+                    placeholder="e.g. 4.2"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
+
+                {/* Trunk */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Trunk diameter (cm)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={manualForm.trunk}
+                    onChange={e => setManualForm(f => ({ ...f, trunk: e.target.value }))}
+                    placeholder="e.g. 22.4"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+                  />
+                </div>
+
+                {/* Health */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Health</label>
+                  <select
+                    value={manualForm.health}
+                    onChange={e => setManualForm(f => ({ ...f, health: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
+                  >
+                    <option value="healthy">Healthy</option>
+                    <option value="stressed">Stressed</option>
+                    <option value="dead">Dead / dying</option>
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Notes</label>
+                  <textarea
+                    value={manualForm.notes}
+                    onChange={e => setManualForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="Any observations about this tree…"
+                    rows={2}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 resize-none"
+                  />
+                </div>
+
+                {/* Inaccessible */}
+                <div className="sm:col-span-2 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="manual-inaccessible"
+                    checked={manualForm.inaccessible}
+                    onChange={e => setManualForm(f => ({ ...f, inaccessible: e.target.checked }))}
+                    className="w-4 h-4 accent-forest-600"
+                  />
+                  <label htmlFor="manual-inaccessible" className="text-sm text-gray-600">Tree is inaccessible (could not measure)</label>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo upload */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="bg-forest-700 text-white px-5 py-3">
+                <p className="font-semibold text-sm">Photo <span className="text-forest-300 font-normal text-xs ml-1">optional</span></p>
+              </div>
+              <div className="p-5">
+                {manualPhotoPreview ? (
+                  <div className="flex items-center gap-4">
+                    <img src={manualPhotoPreview} alt="Preview" className="w-24 h-24 object-cover rounded-xl border border-gray-200" />
+                    <div>
+                      <p className="text-sm text-gray-700 font-medium">{manualPhoto?.name}</p>
+                      <button
+                        onClick={() => { setManualPhoto(null); setManualPhotoPreview(null) }}
+                        className="text-xs text-red-400 hover:text-red-600 mt-1"
+                      >
+                        Remove photo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 rounded-xl py-8 cursor-pointer hover:border-forest-400 hover:bg-forest-50 transition-colors">
+                    <span className="text-3xl">📷</span>
+                    <span className="text-sm text-gray-500">Click to upload tree photo</span>
+                    <span className="text-xs text-gray-400">JPG or PNG</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        setManualPhoto(file)
+                        const reader = new FileReader()
+                        reader.onloadend = () => setManualPhotoPreview(reader.result)
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={submitManualTree}
+              disabled={manualSubmitting || !manualZoneId}
+              className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {manualSubmitting ? (
+                <><span className="animate-spin">⏳</span> Saving tree…</>
+              ) : (
+                <>🌳 Save this tree</>
+              )}
+            </button>
+
+            {/* Recently added */}
+            {manualRecentTrees.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Just added this session</p>
+                <div className="space-y-2">
+                  {manualRecentTrees.map((t, i) => (
+                    <div key={t.id || i} className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                      {t.photoPreview ? (
+                        <img src={t.photoPreview} alt="" className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                      ) : (
+                        <span className="text-2xl shrink-0">🌳</span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-green-900">{t.species || 'Unidentified tree'}</p>
+                        <p className="text-xs text-green-700">Zone {t.zoneLabel} · {[t.height_m && `H: ${t.height_m}m`, t.crown_diameter_m && `Crown: ${t.crown_diameter_m}m`, t.trunk_diameter_cm && `Trunk: ${t.trunk_diameter_cm}cm`].filter(Boolean).join(' · ')}</p>
+                      </div>
+                      <span className="text-green-500 text-lg">✓</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,7 +1,10 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 
 export default function ToolContent() {
+  const [clinometerOpen, setClinometerOpen] = useState(false)
+
   return (
     <div>
       {/* ── Hero + CTAs ── */}
@@ -149,15 +152,105 @@ export default function ToolContent() {
               </div>
             </div>
 
-            <div className="flex gap-4 items-start bg-forest-50 rounded-2xl p-6">
+            <button
+              onClick={() => setClinometerOpen(o => !o)}
+              className="flex gap-4 items-start bg-forest-50 rounded-2xl p-6 w-full text-left hover:bg-forest-100 transition-colors group"
+            >
               <div className="text-4xl shrink-0">📐</div>
-              <div>
-                <h3 className="font-semibold text-forest-800 mb-1">Cardboard triangle</h3>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-forest-800 mb-1">Cardboard clinometer</h3>
+                  <span className="text-forest-500 text-sm font-medium group-hover:text-forest-700 transition-colors">
+                    {clinometerOpen ? '▲ Close' : '▼ How to build it'}
+                  </span>
+                </div>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  A simple homemade clinometer for estimating tree height. Cut a right-angle triangle from cardboard, attach a string with a small weight, and sight along the long edge. Instructions are in the printable kit below.
+                  A simple homemade tool for measuring tree height — takes 5 minutes to build. Click to see step-by-step instructions.
                 </p>
               </div>
-            </div>
+            </button>
+
+            {clinometerOpen && (
+              <div className="bg-white border border-forest-200 rounded-2xl overflow-hidden -mt-2">
+                <div className="bg-forest-700 text-white px-6 py-4">
+                  <h4 className="font-bold text-base">Build a cardboard clinometer</h4>
+                  <p className="text-forest-200 text-xs mt-0.5">A free, 5-minute DIY height meter</p>
+                </div>
+                <div className="p-6 grid sm:grid-cols-2 gap-8">
+                  {/* Left — build steps */}
+                  <div>
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">You need</div>
+                    <ul className="text-sm text-gray-700 space-y-1 mb-5">
+                      <li>✂️ Piece of cardboard (~25 × 25 cm)</li>
+                      <li>📏 Ruler and pencil</li>
+                      <li>🪡 String (~35 cm)</li>
+                      <li>🪙 A coin or small washer</li>
+                      <li>📌 Pin or hole punch</li>
+                    </ul>
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Build it</div>
+                    <ol className="text-sm text-gray-700 space-y-3">
+                      {[
+                        'Draw two sides of exactly 20 cm at a right angle on the cardboard. Connect them with the hypotenuse. Cut it out.',
+                        'Mark the right-angle corner with a small square so you always know which corner it is.',
+                        'Make a small hole at the right-angle corner. Thread the string through and tie a knot on the back so it won\'t pull through.',
+                        'Tie the coin or washer to the free end of the string. It will hang straight down by gravity.',
+                        'Label the hypotenuse: "Look this way →" pointing from the right-angle end toward the opposite corner.',
+                      ].map((step, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="w-5 h-5 rounded-full bg-forest-100 text-forest-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* Right — diagram + use it */}
+                  <div>
+                    {/* Diagram */}
+                    <svg viewBox="0 0 260 230" className="w-full max-w-[220px] mx-auto block mb-5" style={{ fontFamily: 'Arial, sans-serif' }}>
+                      <polygon points="30,190 30,30 190,190" fill="#f0fdf4" stroke="#15803d" strokeWidth="2.5" strokeLinejoin="round" />
+                      <polyline points="30,170 50,170 50,190" fill="none" stroke="#15803d" strokeWidth="1.5" />
+                      <defs>
+                        <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                          <path d="M0,0 L0,6 L8,3 z" fill="#15803d" />
+                        </marker>
+                      </defs>
+                      <line x1="60" y1="170" x2="155" y2="75" stroke="#15803d" strokeWidth="2" strokeDasharray="6,3" markerEnd="url(#arr2)" />
+                      <text x="95" y="122" fontSize="9" fill="#15803d" fontWeight="bold" transform="rotate(-44,95,122)">Sight line</text>
+                      <line x1="30" y1="190" x2="30" y2="225" stroke="#374151" strokeWidth="2" strokeDasharray="4,2" />
+                      <circle cx="30" cy="229" r="7" fill="#374151" />
+                      <text x="42" y="233" fontSize="9" fill="#374151">weight</text>
+                      <ellipse cx="195" cy="195" rx="9" ry="5" fill="none" stroke="#1e40af" strokeWidth="1.5" />
+                      <circle cx="195" cy="195" r="2.5" fill="#1e40af" />
+                      <text x="207" y="200" fontSize="9" fill="#1e40af">Eye</text>
+                      <text x="10" y="24" fontSize="10" fill="#15803d">🌲 Tree top</text>
+                      <text x="2" y="185" fontSize="9" fill="#374151">Right</text>
+                      <text x="2" y="195" fontSize="9" fill="#374151">angle</text>
+                    </svg>
+
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Use it</div>
+                    <ol className="text-sm text-gray-700 space-y-2">
+                      {[
+                        'Stand back until you can see the top. Measure your distance from the trunk (D).',
+                        'Hold the clinometer at eye level, right-angle corner toward you. Let the string hang.',
+                        'Tilt until the tree top lines up with the hypotenuse. Pinch the string.',
+                        'If the string hits the midpoint of the vertical side → you\'re at 45°.',
+                      ].map((step, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="w-5 h-5 rounded-full bg-forest-100 text-forest-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <div className="text-xs font-bold text-amber-800 mb-1">Formula at 45°</div>
+                      <div className="font-mono text-sm font-bold text-amber-900 text-center py-1">Height = Distance + Eye height</div>
+                      <div className="text-xs text-amber-700 mt-1">e.g. 8 m away, eye at 1.5 m → tree is 9.5 m tall</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-4 items-start bg-forest-50 rounded-2xl p-6">
               <div className="text-4xl shrink-0">📱</div>
@@ -190,16 +283,19 @@ export default function ToolContent() {
           <p className="text-gray-600 max-w-xl mx-auto mb-8 leading-relaxed">
             Download and print the field data sheet before heading outside. Students fill it in by hand, and you enter the data later when back online. The sheet includes all measurement fields plus instructions for building the cardboard triangle clinometer.
           </p>
-          <a
-            href="/printable-field-sheet.pdf"
-            className="inline-flex items-center gap-2 bg-forest-600 text-white font-semibold px-8 py-4 rounded-2xl hover:bg-forest-700 transition-colors shadow"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
-            </svg>
-            Download printable field sheet (PDF)
-          </a>
-          <p className="text-xs text-gray-400 mt-4">Available in English and Spanish</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <Link
+              href="/print/field-sheet"
+              target="_blank"
+              className="inline-flex items-center gap-2 bg-forest-600 text-white font-semibold px-8 py-4 rounded-2xl hover:bg-forest-700 transition-colors shadow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Open printable field sheet
+            </Link>
+            <span className="text-xs text-gray-400">Opens in a new tab — use browser Print → Save as PDF</span>
+          </div>
         </div>
       </section>
 
