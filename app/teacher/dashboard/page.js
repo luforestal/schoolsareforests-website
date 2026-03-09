@@ -66,6 +66,17 @@ export default function TeacherDashboard() {
   const [sessionLoading, setSessionLoading] = useState(false)
   const [copiedSession, setCopiedSession] = useState(false)
 
+  // Location state
+  const [coordInput, setCoordInput] = useState('')
+  const [coordParsed, setCoordParsed] = useState(null) // { lat, lng }
+  const [coordError, setCoordError] = useState('')
+  const [savingLocation, setSavingLocation] = useState(false)
+  const [locationSaved, setLocationSaved] = useState(false)
+  const [kmlFile, setKmlFile] = useState(null)
+  const [kmlParsed, setKmlParsed] = useState(null) // GeoJSON polygon
+  const [kmlError, setKmlError] = useState('')
+  const [locationMapRef, setLocationMapRef] = useState(null)
+
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
@@ -96,6 +107,11 @@ export default function TeacherDashboard() {
 
     setSchool(schoolData)
     setPublished(schoolData?.published ?? false)
+    if (schoolData?.lat && schoolData?.lng) {
+      const c = { lat: schoolData.lat, lng: schoolData.lng }
+      setCoordParsed(c)
+      setCoordInput(`${schoolData.lat}, ${schoolData.lng}`)
+    }
 
     const { data: zonesData } = await supabase
       .from('zones')
@@ -291,6 +307,92 @@ export default function TeacherDashboard() {
 
   const [activeTab, setActiveTab] = useState('zones')
 
+  // Parse "lat, lng" string from Google Maps
+  const parseCoords = (raw) => {
+    const match = raw.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
+    if (!match) return null
+    const lat = parseFloat(match[1])
+    const lng = parseFloat(match[2])
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+    return { lat, lng }
+  }
+
+  const handleCoordInput = (val) => {
+    setCoordInput(val)
+    setCoordError('')
+    setLocationSaved(false)
+    const parsed = parseCoords(val)
+    setCoordParsed(parsed)
+  }
+
+  const handleKmlUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setKmlFile(file)
+    setKmlError('')
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const parser = new DOMParser()
+        const kml = parser.parseFromString(ev.target.result, 'text/xml')
+        const coords = kml.querySelector('coordinates')
+        if (!coords) { setKmlError('No polygon coordinates found in this KML file.'); return }
+        const pairs = coords.textContent.trim().split(/\s+/).map(p => {
+          const [lng, lat] = p.split(',').map(Number)
+          return [lng, lat]
+        }).filter(p => !isNaN(p[0]) && !isNaN(p[1]))
+        if (pairs.length < 3) { setKmlError('The polygon has too few points.'); return }
+        setKmlParsed({ type: 'Polygon', coordinates: [pairs] })
+      } catch {
+        setKmlError('Could not read this file. Make sure it is a valid KML.')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const saveLocation = async () => {
+    if (!coordParsed) { setCoordError('Please enter valid coordinates first.'); return }
+    setSavingLocation(true)
+    const updates = {
+      lat: coordParsed.lat,
+      lng: coordParsed.lng,
+    }
+    if (kmlParsed) updates.perimeter_geojson = JSON.stringify(kmlParsed)
+    const { error } = await supabase.from('schools').update(updates).eq('id', school.id)
+    setSavingLocation(false)
+    if (error) { setCoordError(error.message); return }
+    setLocationSaved(true)
+    setSchool(prev => ({ ...prev, ...updates }))
+  }
+
+  // Init Leaflet preview map for location tab
+  const initLocationMap = async (containerId) => {
+    if (typeof window === 'undefined') return
+    if (locationMapRef) { locationMapRef.remove(); setLocationMapRef(null) }
+    const L = (await import('leaflet')).default
+    if (!document.getElementById(containerId)) return
+    const existing = document.getElementById(containerId)._leaflet_id
+    if (existing) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    document.head.appendChild(link)
+    delete L.Icon.Default.prototype._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    })
+    const center = coordParsed || (school?.lat ? { lat: school.lat, lng: school.lng } : { lat: 4.71, lng: -74.07 })
+    const map = L.map(containerId).setView([center.lat, center.lng], 17)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Esri World Imagery',
+    }).addTo(map)
+    if (coordParsed) L.marker([coordParsed.lat, coordParsed.lng]).addTo(map)
+    else if (school?.lat) L.marker([school.lat, school.lng]).addTo(map)
+    setLocationMapRef(map)
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/teacher')
@@ -312,6 +414,7 @@ export default function TeacherDashboard() {
     { id: 'use', label: 'How to Use' },
     { id: 'zones', label: 'Zones' },
     { id: 'validation', label: 'Validation' },
+    { id: 'location', label: 'Location' },
   ]
 
   return (
@@ -719,6 +822,121 @@ export default function TeacherDashboard() {
             )}
           </div>
         )}
+        {/* ── TAB: LOCATION ── */}
+        {activeTab === 'location' && (
+          <div className="space-y-6">
+
+            {/* Current status */}
+            {school?.lat && school?.lng && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                <span>✓</span>
+                <span>School location saved: <span className="font-mono">{school.lat.toFixed(6)}, {school.lng.toFixed(6)}</span></span>
+              </div>
+            )}
+
+            {/* Step 1 — Coordinates */}
+            <div className="bg-white rounded-xl p-5 shadow-sm">
+              <p className="font-semibold text-forest-800 mb-1">School centroid coordinates</p>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                This helps us place your school accurately on the map — especially useful if your address is hard to geocode.
+              </p>
+
+              {/* Instructions */}
+              <div className="bg-forest-50 rounded-xl p-4 mb-4 text-sm text-forest-800 space-y-1.5">
+                <p className="font-semibold mb-2">How to get your school's coordinates:</p>
+                <p>1. Open <strong>Google Maps</strong> in your browser</p>
+                <p>2. Search for your school by name</p>
+                <p>3. <strong>Right-click</strong> on the center of your school grounds</p>
+                <p>4. The coordinates appear at the top of the menu — click them to copy</p>
+                <p>5. Paste them in the field below</p>
+                <p className="text-forest-500 text-xs mt-2">They look like: <span className="font-mono">4.710989, -74.072092</span></p>
+              </div>
+
+              <label className="block text-xs font-medium text-gray-500 mb-1">Coordinates (lat, lng)</label>
+              <input
+                type="text"
+                value={coordInput}
+                onChange={e => handleCoordInput(e.target.value)}
+                placeholder="e.g. 4.710989, -74.072092"
+                className={`w-full border rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-forest-400 ${
+                  coordParsed ? 'border-green-300 bg-green-50' : 'border-gray-300'
+                }`}
+              />
+              {coordParsed && (
+                <p className="text-xs text-green-600 mt-1">✓ Valid — lat {coordParsed.lat.toFixed(6)}, lng {coordParsed.lng.toFixed(6)}</p>
+              )}
+              {coordError && (
+                <p className="text-xs text-red-500 mt-1">{coordError}</p>
+              )}
+            </div>
+
+            {/* Map preview */}
+            {coordParsed && (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-forest-800">Preview</p>
+                  <button
+                    type="button"
+                    onClick={() => initLocationMap('location-map')}
+                    className="text-xs text-forest-600 underline hover:text-forest-700"
+                  >
+                    Load map
+                  </button>
+                </div>
+                <div id="location-map" className="w-full h-56 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+                  Click "Load map" to preview
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 — KML (optional) */}
+            <div className="bg-white rounded-xl p-5 shadow-sm">
+              <p className="font-semibold text-forest-800 mb-1">School perimeter <span className="text-gray-400 font-normal text-sm">(optional)</span></p>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                Upload a KML file of your school boundary. This lets us show the full outline of your campus on the public map. If you don't have one, skip this step.
+              </p>
+
+              <div className="bg-amber-50 rounded-xl p-4 mb-4 text-sm text-amber-800 space-y-1.5">
+                <p className="font-semibold mb-2">How to export a KML from Google Maps:</p>
+                <p>1. Open <strong>Google My Maps</strong> (mymaps.google.com)</p>
+                <p>2. Draw a polygon around your school grounds</p>
+                <p>3. Click the three dots next to your map → <strong>Export to KML</strong></p>
+                <p>4. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
+              </div>
+
+              <label className="block cursor-pointer">
+                <div className={`border-2 border-dashed rounded-xl px-4 py-6 text-center transition-colors ${
+                  kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'
+                }`}>
+                  {kmlParsed ? (
+                    <div className="text-green-700 text-sm">
+                      <p className="text-xl mb-1">✓</p>
+                      <p className="font-semibold">{kmlFile?.name}</p>
+                      <p className="text-xs text-green-600 mt-1">{kmlParsed.coordinates[0].length} boundary points loaded</p>
+                    </div>
+                  ) : (
+                    <div className="text-gray-400 text-sm">
+                      <p className="text-2xl mb-2">📄</p>
+                      <p>Click to upload a .kml file</p>
+                    </div>
+                  )}
+                </div>
+                <input type="file" accept=".kml,.kmz" onChange={handleKmlUpload} className="hidden" />
+              </label>
+              {kmlError && <p className="text-xs text-red-500 mt-2">{kmlError}</p>}
+            </div>
+
+            {/* Save button */}
+            <button
+              onClick={saveLocation}
+              disabled={savingLocation || !coordParsed}
+              className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50"
+            >
+              {savingLocation ? 'Saving…' : locationSaved ? '✓ Location saved!' : 'Save Location'}
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   )
