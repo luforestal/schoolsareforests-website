@@ -67,6 +67,7 @@ export default function TeacherDashboard() {
   const [copiedSession, setCopiedSession] = useState(false)
 
   // Location state
+  const [locationMethod, setLocationMethod] = useState('coords') // 'coords' | 'kml'
   const [coordInput, setCoordInput] = useState('')
   const [coordParsed, setCoordParsed] = useState(null) // { lat, lng }
   const [coordError, setCoordError] = useState('')
@@ -343,6 +344,11 @@ export default function TeacherDashboard() {
         }).filter(p => !isNaN(p[0]) && !isNaN(p[1]))
         if (pairs.length < 3) { setKmlError('The polygon has too few points.'); return }
         setKmlParsed({ type: 'Polygon', coordinates: [pairs] })
+        // Auto-compute centroid from polygon
+        const avgLng = pairs.reduce((s, p) => s + p[0], 0) / pairs.length
+        const avgLat = pairs.reduce((s, p) => s + p[1], 0) / pairs.length
+        setCoordParsed({ lat: avgLat, lng: avgLng })
+        setCoordInput(`${avgLat.toFixed(6)}, ${avgLng.toFixed(6)}`)
       } catch {
         setKmlError('Could not read this file. Make sure it is a valid KML.')
       }
@@ -830,56 +836,99 @@ export default function TeacherDashboard() {
             {school?.lat && school?.lng && (
               <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 flex items-center gap-2">
                 <span>✓</span>
-                <span>School location saved: <span className="font-mono">{school.lat.toFixed(6)}, {school.lng.toFixed(6)}</span></span>
+                <span>Location saved: <span className="font-mono">{Number(school.lat).toFixed(6)}, {Number(school.lng).toFixed(6)}</span>
+                {school.perimeter_geojson && <span className="ml-2 bg-green-200 text-green-800 px-2 py-0.5 rounded-full text-xs">+ perimeter</span>}</span>
               </div>
             )}
 
-            {/* Step 1 — Coordinates */}
+            {/* Method toggle */}
             <div className="bg-white rounded-xl p-5 shadow-sm">
-              <p className="font-semibold text-forest-800 mb-1">School centroid coordinates</p>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-                This helps us place your school accurately on the map — especially useful if your address is hard to geocode.
-              </p>
-
-              {/* Instructions */}
-              <div className="bg-forest-50 rounded-xl p-4 mb-4 text-sm text-forest-800 space-y-1.5">
-                <p className="font-semibold mb-2">How to get your school's coordinates:</p>
-                <p>1. Open <strong>Google Maps</strong> in your browser</p>
-                <p>2. Search for your school by name</p>
-                <p>3. <strong>Right-click</strong> on the center of your school grounds</p>
-                <p>4. The coordinates appear at the top of the menu — click them to copy</p>
-                <p>5. Paste them in the field below</p>
-                <p className="text-forest-500 text-xs mt-2">They look like: <span className="font-mono">4.710989, -74.072092</span></p>
+              <p className="font-semibold text-forest-800 mb-1">How would you like to set your school location?</p>
+              <p className="text-sm text-gray-500 mb-4">Choose one — either paste coordinates from Google Maps, or upload a KML boundary file from Google Earth (we'll calculate the center automatically).</p>
+              <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                <button type="button" onClick={() => { setLocationMethod('coords'); setKmlParsed(null); setKmlFile(null); setKmlError('') }}
+                  className={`flex-1 py-4 px-4 text-sm font-semibold transition-colors text-left flex items-start gap-3 ${locationMethod === 'coords' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                  <span className="text-xl">📍</span>
+                  <div>
+                    <p>Paste coordinates</p>
+                    <p className={`text-xs font-normal mt-0.5 ${locationMethod === 'coords' ? 'text-forest-200' : 'text-gray-400'}`}>From Google Maps right-click</p>
+                  </div>
+                </button>
+                <button type="button" onClick={() => { setLocationMethod('kml'); setCoordInput(''); setCoordParsed(null); setCoordError('') }}
+                  className={`flex-1 py-4 px-4 text-sm font-semibold transition-colors text-left flex items-start gap-3 border-l border-gray-200 ${locationMethod === 'kml' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                  <span className="text-xl">🗺️</span>
+                  <div>
+                    <p>Upload KML boundary</p>
+                    <p className={`text-xs font-normal mt-0.5 ${locationMethod === 'kml' ? 'text-forest-200' : 'text-gray-400'}`}>From Google Earth — center auto-calculated</p>
+                  </div>
+                </button>
               </div>
-
-              <label className="block text-xs font-medium text-gray-500 mb-1">Coordinates (lat, lng)</label>
-              <input
-                type="text"
-                value={coordInput}
-                onChange={e => handleCoordInput(e.target.value)}
-                placeholder="e.g. 4.710989, -74.072092"
-                className={`w-full border rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-forest-400 ${
-                  coordParsed ? 'border-green-300 bg-green-50' : 'border-gray-300'
-                }`}
-              />
-              {coordParsed && (
-                <p className="text-xs text-green-600 mt-1">✓ Valid — lat {coordParsed.lat.toFixed(6)}, lng {coordParsed.lng.toFixed(6)}</p>
-              )}
-              {coordError && (
-                <p className="text-xs text-red-500 mt-1">{coordError}</p>
-              )}
             </div>
+
+            {/* Option A: Coordinates */}
+            {locationMethod === 'coords' && (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="bg-forest-50 rounded-xl p-4 mb-4 text-sm text-forest-800 space-y-1.5">
+                  <p className="font-semibold mb-2">How to get your school's coordinates from Google Maps:</p>
+                  <p>1. Open <strong>Google Maps</strong> in your browser</p>
+                  <p>2. Search for your school by name</p>
+                  <p>3. <strong>Right-click</strong> on the center of your school grounds</p>
+                  <p>4. The coordinates appear at the top of the menu — click them to copy</p>
+                  <p>5. Paste them in the field below</p>
+                  <p className="text-forest-500 text-xs mt-2">They look like: <span className="font-mono">4.710989, -74.072092</span></p>
+                </div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Coordinates (lat, lng)</label>
+                <input type="text" value={coordInput} onChange={e => handleCoordInput(e.target.value)}
+                  placeholder="e.g. 4.710989, -74.072092"
+                  className={`w-full border rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-forest-400 ${coordParsed ? 'border-green-300 bg-green-50' : 'border-gray-300'}`} />
+                {coordParsed && <p className="text-xs text-green-600 mt-1">✓ Valid — lat {coordParsed.lat.toFixed(6)}, lng {coordParsed.lng.toFixed(6)}</p>}
+                {coordError && <p className="text-xs text-red-500 mt-1">{coordError}</p>}
+              </div>
+            )}
+
+            {/* Option B: KML */}
+            {locationMethod === 'kml' && (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="bg-amber-50 rounded-xl p-4 mb-4 text-sm text-amber-800 space-y-1.5">
+                  <p className="font-semibold mb-2">How to create and export a KML from Google Earth:</p>
+                  <p>1. Open <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-amber-900">Google Earth</a> in your browser</p>
+                  <p>2. Search for your school using the search bar</p>
+                  <p>3. In the left panel, click <strong>New Project</strong> → <strong>Create KML file</strong></p>
+                  <p>4. Click <strong>New Feature</strong> → <strong>Draw polygon</strong></p>
+                  <p>5. Click around the perimeter of your school to trace the boundary — close the shape by clicking the first point again</p>
+                  <p>6. Give the polygon a name (e.g. "School boundary") and click <strong>Save</strong></p>
+                  <p>7. In the left panel, click the three dots next to your project → <strong>Export as KML file</strong></p>
+                  <p>8. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
+                  <p className="text-amber-600 text-xs mt-2">No Google Earth account? Use <a href="https://mymaps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google My Maps</a> — draw a polygon, then Export → KML.</p>
+                </div>
+                <label className="block cursor-pointer">
+                  <div className={`border-2 border-dashed rounded-xl px-4 py-6 text-center transition-colors ${kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'}`}>
+                    {kmlParsed ? (
+                      <div className="text-green-700 text-sm">
+                        <p className="text-xl mb-1">✓</p>
+                        <p className="font-semibold">{kmlFile?.name}</p>
+                        <p className="text-xs text-green-600 mt-1">{kmlParsed.coordinates[0].length} boundary points · center auto-calculated</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">
+                        <p className="text-2xl mb-2">📄</p>
+                        <p>Click to upload a .kml file</p>
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" accept=".kml,.kmz" onChange={handleKmlUpload} className="hidden" />
+                </label>
+                {kmlError && <p className="text-xs text-red-500 mt-2">{kmlError}</p>}
+              </div>
+            )}
 
             {/* Map preview */}
             {coordParsed && (
               <div className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold text-forest-800">Preview</p>
-                  <button
-                    type="button"
-                    onClick={() => initLocationMap('location-map')}
-                    className="text-xs text-forest-600 underline hover:text-forest-700"
-                  >
+                  <button type="button" onClick={() => initLocationMap('location-map')}
+                    className="text-xs text-forest-600 underline hover:text-forest-700">
                     Load map
                   </button>
                 </div>
@@ -889,54 +938,9 @@ export default function TeacherDashboard() {
               </div>
             )}
 
-            {/* Step 2 — KML (optional) */}
-            <div className="bg-white rounded-xl p-5 shadow-sm">
-              <p className="font-semibold text-forest-800 mb-1">School perimeter <span className="text-gray-400 font-normal text-sm">(optional)</span></p>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-                Upload a KML file of your school boundary. This lets us show the full outline of your campus on the public map. If you don't have one, skip this step.
-              </p>
-
-              <div className="bg-amber-50 rounded-xl p-4 mb-4 text-sm text-amber-800 space-y-1.5">
-                <p className="font-semibold mb-2">How to create and export a KML from Google Earth:</p>
-                <p>1. Open <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-amber-900">Google Earth</a> in your browser</p>
-                <p>2. Search for your school using the search bar</p>
-                <p>3. In the left panel, click <strong>New Project</strong> → <strong>Create KML file</strong></p>
-                <p>4. Click <strong>New Feature</strong> → <strong>Draw polygon</strong></p>
-                <p>5. Click around the perimeter of your school to trace the boundary — close the shape by clicking the first point again</p>
-                <p>6. Give the polygon a name (e.g. "School boundary") and click <strong>Save</strong></p>
-                <p>7. In the left panel, click the three dots next to your project → <strong>Export as KML file</strong></p>
-                <p>8. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
-                <p className="text-amber-600 text-xs mt-2">No Google Earth account? You can also use <a href="https://mymaps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google My Maps</a> — draw a polygon, then Export → KML.</p>
-              </div>
-
-              <label className="block cursor-pointer">
-                <div className={`border-2 border-dashed rounded-xl px-4 py-6 text-center transition-colors ${
-                  kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'
-                }`}>
-                  {kmlParsed ? (
-                    <div className="text-green-700 text-sm">
-                      <p className="text-xl mb-1">✓</p>
-                      <p className="font-semibold">{kmlFile?.name}</p>
-                      <p className="text-xs text-green-600 mt-1">{kmlParsed.coordinates[0].length} boundary points loaded</p>
-                    </div>
-                  ) : (
-                    <div className="text-gray-400 text-sm">
-                      <p className="text-2xl mb-2">📄</p>
-                      <p>Click to upload a .kml file</p>
-                    </div>
-                  )}
-                </div>
-                <input type="file" accept=".kml,.kmz" onChange={handleKmlUpload} className="hidden" />
-              </label>
-              {kmlError && <p className="text-xs text-red-500 mt-2">{kmlError}</p>}
-            </div>
-
             {/* Save button */}
-            <button
-              onClick={saveLocation}
-              disabled={savingLocation || !coordParsed}
-              className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50"
-            >
+            <button onClick={saveLocation} disabled={savingLocation || !coordParsed}
+              className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50">
               {savingLocation ? 'Saving…' : locationSaved ? '✓ Location saved!' : 'Save Location'}
             </button>
           </div>
