@@ -164,7 +164,7 @@ export default function TeacherDashboard() {
       label: newZoneLabel,
       category: newZoneCategory || null,
       description: newZoneDesc.trim() || null,
-      group_number: newZoneGroup ? parseInt(newZoneGroup) : null,
+      group_number: newZoneGroup.trim() || null,
     })
     if (!error) {
       setAddingZone(false)
@@ -191,7 +191,7 @@ export default function TeacherDashboard() {
     await supabase.from('zones').update({
       category: editCategory || null,
       description: editDesc.trim() || null,
-      group_number: editGroup ? parseInt(editGroup) : null,
+      group_number: editGroup.trim() || null,
     }).eq('id', editingZone.id)
     setEditingZone(null)
     loadData()
@@ -289,10 +289,15 @@ export default function TeacherDashboard() {
     setTogglingPublished(false)
   }
 
+  const [activeTab, setActiveTab] = useState('zones')
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/teacher')
   }
+
+  const totalValidations = Object.values(validationCounts).reduce((a, b) => a + b, 0)
+  const totalTrees = Object.values(treeCounts).reduce((a, b) => a + b, 0)
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
@@ -302,6 +307,12 @@ export default function TeacherDashboard() {
 
   // The most recent session for the "reactivate" option
   const lastSession = sessions.find(s => !s.is_active || isExpired(s.expires_at))
+
+  const TABS = [
+    { id: 'use', label: 'How to Use' },
+    { id: 'zones', label: 'Zones' },
+    { id: 'validation', label: 'Validation' },
+  ]
 
   return (
     <div className="min-h-screen bg-forest-50">
@@ -313,19 +324,16 @@ export default function TeacherDashboard() {
             <h1 className="text-xl font-bold">{school?.name}</h1>
             <p className="text-forest-300 text-sm">{teacher?.name}</p>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="text-forest-300 hover:text-white text-sm transition-colors"
-          >
+          <button onClick={handleSignOut} className="text-forest-300 hover:text-white text-sm transition-colors">
             Sign Out
           </button>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="max-w-4xl mx-auto px-6 pt-8 pb-16">
 
-        {/* School Info Panel */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-8 flex items-center gap-5">
+        {/* School Info */}
+        <div className="bg-white rounded-xl shadow-sm p-5 mb-6 flex items-center gap-5">
           {school?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={school.logo_url} alt="School logo" className="h-16 w-16 object-contain rounded-lg border border-gray-100 flex-shrink-0" />
@@ -339,374 +347,378 @@ export default function TeacherDashboard() {
             {school?.location && <p className="text-gray-500 text-sm mt-0.5">{school.location}</p>}
             {school?.address && <p className="text-gray-400 text-xs mt-0.5">{school.address}{school?.postal_code ? `, ${school.postal_code}` : ''}</p>}
           </div>
-          <div className="text-right flex-shrink-0">
-            {school?.phone && <p className="text-sm text-gray-500">📞 {school.phone}</p>}
-          </div>
-        </div>
-
-        {/* Publish toggle */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-8 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-forest-800">Visible in Explore Schools</p>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {published
-                ? 'Your school is publicly visible on the map.'
-                : 'Your school is hidden — only you can see it.'}
-            </p>
-          </div>
-          <button
-            onClick={togglePublished}
-            disabled={togglingPublished}
-            className={`relative inline-flex h-7 w-14 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-              published ? 'bg-forest-600' : 'bg-gray-200'
-            } ${togglingPublished ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${published ? 'translate-x-7' : 'translate-x-0'}`} />
-          </button>
+          {school?.phone && <p className="text-sm text-gray-500 flex-shrink-0">📞 {school.phone}</p>}
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
-          <div className="bg-white rounded-xl p-5 text-center shadow-sm">
-            <div className="text-3xl font-bold text-forest-700">{zones.length}</div>
-            <div className="text-gray-400 text-sm mt-1">Zones</div>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+            <div className="text-2xl font-bold text-forest-700">{zones.length}</div>
+            <div className="text-gray-400 text-xs mt-1">Zones</div>
           </div>
-          <div className="bg-white rounded-xl p-5 text-center shadow-sm">
-            <div className="text-3xl font-bold text-forest-700">
-              {Object.values(treeCounts).reduce((a, b) => a + b, 0)}
-            </div>
-            <div className="text-gray-400 text-sm mt-1">Trees Submitted</div>
+          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+            <div className="text-2xl font-bold text-forest-700">{totalTrees}</div>
+            <div className="text-gray-400 text-xs mt-1">Trees</div>
           </div>
-          <div className="bg-white rounded-xl p-5 text-center shadow-sm">
-            <div className="text-3xl font-bold text-forest-700">
-              {zones.filter(z => z.completed).length}
-            </div>
-            <div className="text-gray-400 text-sm mt-1">Zones Complete</div>
+          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+            <div className="text-2xl font-bold text-forest-700">{totalValidations}</div>
+            <div className="text-gray-400 text-xs mt-1">Validated</div>
           </div>
         </div>
 
-        {/* Zones */}
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-bold text-forest-800">Campus Zones</h2>
-          <button
-            onClick={() => { setAddingZone(true); setNewZoneLabel(nextAvailableLetter()) }}
-            className="bg-forest-700 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-forest-600 transition-colors"
-          >
-            + Add Zone
-          </button>
+        {/* Tabs */}
+        <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-8 bg-white shadow-sm">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-forest-700 text-white'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <p className="text-sm text-gray-400 mb-5">
-          Divide your school grounds into zones — one per student group. Create all zones before starting a session.
-        </p>
 
-        {/* Add zone form */}
-        {addingZone && (
-          <form onSubmit={handleAddZone} className="bg-white rounded-xl p-5 shadow-sm mb-4 border-2 border-forest-200">
-            <h3 className="font-semibold text-forest-800 mb-4">New Zone</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Zone Letter *</label>
-                <select
-                  value={newZoneLabel}
-                  onChange={e => setNewZoneLabel(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
-                  required
-                >
-                  {ZONE_LETTERS.filter(l => !zones.map(z => z.label).includes(l)).map(l => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                <select
-                  value={newZoneCategory}
-                  onChange={e => setNewZoneCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white"
-                >
-                  <option value="">Select category…</option>
-                  {ZONE_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
+        {/* ── TAB: HOW TO USE ── */}
+        {activeTab === 'use' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+              <p className="font-semibold text-forest-800 mb-1">1. What are zones?</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Zones are sections of your school grounds — each assigned to a student group. Zone A might be the playground, Zone B the garden, etc. Each zone gets a letter and a location type. Divide them so every group has a similar number of trees to measure.
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Description <span className="font-normal text-gray-400">(optional)</span></label>
-                <input
-                  type="text"
-                  value={newZoneDesc}
-                  onChange={e => setNewZoneDesc(e.target.value)}
-                  placeholder="e.g. North side near the gate"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Assigned Group <span className="font-normal text-gray-400">(optional)</span></label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newZoneGroup}
-                  onChange={e => setNewZoneGroup(e.target.value)}
-                  placeholder="e.g. 1"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-                />
-              </div>
+            <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+              <p className="font-semibold text-forest-800 mb-1">2. How many zones do I need?</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                One zone per student group. If you have 30 students in groups of 5, create 6 zones. Balance the number of trees per zone so the workload is even.
+              </p>
             </div>
-            <div className="flex gap-3">
-              <button type="submit" className="bg-forest-700 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-forest-600 transition-colors">
-                Create Zone
-              </button>
-              <button type="button" onClick={() => setAddingZone(false)} className="text-gray-400 text-sm px-5 py-2 hover:text-gray-600">
-                Cancel
-              </button>
+            <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+              <p className="font-semibold text-forest-800 mb-1">3. Starting a session</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Once your zones are ready, go to the <strong>Zones</strong> tab and click <strong>Start Session</strong>. You'll get a 6-character code (e.g. <span className="font-mono bg-gray-100 px-1.5 rounded">XF4T2K</span>). Project it or write it on the board. Students go to <span className="font-mono text-xs bg-gray-100 px-1.5 rounded">schoolsareforests.org/student</span> and enter it. Sessions last 3 hours.
+              </p>
             </div>
-          </form>
+            <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+              <p className="font-semibold text-forest-800 mb-2">4. What do students need?</p>
+              <ul className="text-sm text-gray-600 space-y-1.5">
+                <li>📱 One phone or tablet per group — any browser, no app to install</li>
+                <li>📏 A measuring tape — for trunk circumference and crown diameter</li>
+                <li>📐 A cardboard triangle — for estimating tree height</li>
+                <li>📄 Printed field sheets — if your school has limited internet</li>
+              </ul>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+              <p className="font-semibold text-forest-800 mb-1">5. Validating the data</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                After the session, go to the <strong>Validation</strong> tab. Each zone needs at least 1 review per 10 trees. Check photos, species ID, and measurements. Your school only becomes publicly visible once the minimum validations are complete.
+              </p>
+            </div>
+          </div>
         )}
 
-        {/* Zone cards */}
-        {zones.length === 0 ? (
-          <div className="bg-white rounded-xl p-10 text-center shadow-sm text-gray-400">
-            <div className="text-4xl mb-3">🗺️</div>
-            <p className="font-medium">No zones yet</p>
-            <p className="text-sm mt-1">Click "Add Zone" to create the first zone for your students</p>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-4">
-            {zones.map(zone => {
-              const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
-              const requiredValidations = Math.max(1, Math.ceil(accessibleCount / 10))
-              const doneValidations = validationCounts[zone.id] || 0
-              const validationComplete = accessibleCount === 0 || doneValidations >= requiredValidations
-              return (
-                <div key={zone.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  {/* Clickable area → zone detail */}
-                  <button
-                    onClick={() => router.push(`/teacher/zone/${zone.id}`)}
-                    className="w-full p-5 text-left hover:bg-forest-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-                          {zone.label}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-forest-800">Zone {zone.label}</p>
-                            {zone.category && (
-                              <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">
-                                {zone.category}
-                              </span>
-                            )}
+        {/* ── TAB: ZONES ── */}
+        {activeTab === 'zones' && (
+          <div>
+            {/* Zone management */}
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-forest-800">Campus Zones</h2>
+              <button
+                onClick={() => { setAddingZone(true); setNewZoneLabel(nextAvailableLetter()) }}
+                className="bg-forest-700 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-forest-600 transition-colors"
+              >
+                + Add Zone
+              </button>
+            </div>
+            <p className="text-sm text-gray-400 mb-5">
+              Create all your zones first, then start a session below.
+            </p>
+
+            {/* Add zone form */}
+            {addingZone && (
+              <form onSubmit={handleAddZone} className="bg-white rounded-xl p-5 shadow-sm mb-4 border-2 border-forest-200">
+                <h3 className="font-semibold text-forest-800 mb-4">New Zone</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Zone Letter *</label>
+                    <select value={newZoneLabel} onChange={e => setNewZoneLabel(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" required>
+                      {ZONE_LETTERS.filter(l => !zones.map(z => z.label).includes(l)).map(l => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                    <select value={newZoneCategory} onChange={e => setNewZoneCategory(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white">
+                      <option value="">Select category…</option>
+                      {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Description <span className="font-normal text-gray-400">(optional)</span></label>
+                    <input type="text" value={newZoneDesc} onChange={e => setNewZoneDesc(e.target.value)}
+                      placeholder="e.g. North side near the gate"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Assigned Group <span className="font-normal text-gray-400">(optional)</span></label>
+                    <input type="text" value={newZoneGroup} onChange={e => setNewZoneGroup(e.target.value)}
+                      placeholder="e.g. 1 or Red team"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="bg-forest-700 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-forest-600 transition-colors">
+                    Create Zone
+                  </button>
+                  <button type="button" onClick={() => setAddingZone(false)} className="text-gray-400 text-sm px-5 py-2 hover:text-gray-600">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Zone cards */}
+            {zones.length === 0 ? (
+              <div className="bg-white rounded-xl p-10 text-center shadow-sm text-gray-400 mb-8">
+                <div className="text-4xl mb-3">🗺️</div>
+                <p className="font-medium">No zones yet</p>
+                <p className="text-sm mt-1">Click "+ Add Zone" to create the first zone for your students</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4 mb-8">
+                {zones.map(zone => {
+                  const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
+                  const requiredValidations = Math.max(1, Math.ceil(accessibleCount / 10))
+                  const doneValidations = validationCounts[zone.id] || 0
+                  const validationComplete = accessibleCount === 0 || doneValidations >= requiredValidations
+                  return (
+                    <div key={zone.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                      <button onClick={() => router.push(`/teacher/zone/${zone.id}`)}
+                        className="w-full p-5 text-left hover:bg-forest-50 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                              {zone.label}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-forest-800">Zone {zone.label}</p>
+                                {zone.category && (
+                                  <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">{zone.category}</span>
+                                )}
+                              </div>
+                              {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
+                              {zone.group_number && <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>}
+                            </div>
                           </div>
-                          {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
-                          {zone.group_number && (
-                            <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>
+                          <span className="text-gray-300 text-xl flex-shrink-0">›</span>
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
+                          {(inaccessibleCounts[zone.id] || 0) > 0 && (
+                            <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              ⚠️ {inaccessibleCounts[zone.id]} inaccessible
+                            </span>
+                          )}
+                          {accessibleCount > 0 && (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${validationComplete ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                              {validationComplete ? '✓' : '⚠'} {doneValidations}/{requiredValidations} validated
+                            </span>
                           )}
                         </div>
+                      </button>
+                      <div className="px-5 py-2.5 border-t border-gray-50 flex gap-3">
+                        <button onClick={() => startEditZone(zone)} className="text-xs font-semibold text-forest-700 hover:text-forest-600 transition-colors">Edit</button>
+                        <button onClick={() => deleteZone(zone)} className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors">Delete</button>
                       </div>
-                      <span className="text-gray-300 text-xl flex-shrink-0">›</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
-                      {(inaccessibleCounts[zone.id] || 0) > 0 && (
-                        <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                          ⚠️ {inaccessibleCounts[zone.id]} inaccessible
-                        </span>
+                      {editingZone?.id === zone.id && (
+                        <form onSubmit={saveEditZone} className="px-5 pb-5 border-t border-forest-100 bg-forest-50">
+                          <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide pt-4 mb-3">Edit Zone {zone.label}</p>
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                              <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400">
+                                <option value="">No category</option>
+                                {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
+                              <input type="text" value={editGroup} onChange={e => setEditGroup(e.target.value)}
+                                placeholder="e.g. 1 or Red team"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                            </div>
+                          </div>
+                          <div className="mb-3">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                            <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                              placeholder="e.g. North side near the gate"
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="submit" className="bg-forest-700 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-600 transition-colors">Save</button>
+                            <button type="button" onClick={() => setEditingZone(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-gray-600">Cancel</button>
+                          </div>
+                        </form>
                       )}
-                      {accessibleCount > 0 && (
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          validationComplete
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-red-50 text-red-600'
-                        }`}>
-                          {validationComplete ? '✓' : '⚠'} {doneValidations}/{requiredValidations} validated
-                        </span>
-                      )}
                     </div>
-                  </button>
+                  )
+                })}
+              </div>
+            )}
 
-                  {/* Edit / Delete bar */}
-                  <div className="px-5 py-2.5 border-t border-gray-50 flex gap-3">
-                    <button
-                      onClick={() => startEditZone(zone)}
-                      className="text-xs font-semibold text-forest-700 hover:text-forest-600 transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteZone(zone)}
-                      className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors"
-                    >
-                      Delete
+            {/* Session panel — below zones */}
+            <div className={`rounded-xl p-5 ${activeSession ? 'bg-forest-800 text-white' : 'bg-white shadow-sm border border-gray-100'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className={`text-xs uppercase tracking-wide font-semibold mb-0.5 ${activeSession ? 'text-forest-300' : 'text-gray-400'}`}>
+                    Class Session
+                  </p>
+                  <p className={`text-sm ${activeSession ? 'text-forest-100' : 'text-gray-500'}`}>
+                    {activeSession
+                      ? `Active until ${formatExpiry(activeSession.expires_at)}${activeSession.notes ? ` — ${activeSession.notes}` : ''}`
+                      : 'Once your zones are ready, start a session to let students in'}
+                  </p>
+                </div>
+                {activeSession && (
+                  <span className="text-xs font-bold bg-green-500 text-white px-2.5 py-1 rounded-full uppercase tracking-wide flex-shrink-0">Active</span>
+                )}
+              </div>
+              {activeSession ? (
+                <div>
+                  <div className="flex items-center gap-3 bg-forest-900/50 rounded-xl px-5 py-4 mb-4">
+                    <span className="font-mono text-3xl font-bold text-white tracking-[0.25em] flex-1 text-center">
+                      {activeSession.session_code}
+                    </span>
+                    <button onClick={copySessionCode}
+                      className="flex-shrink-0 bg-white text-forest-800 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-50 transition-colors">
+                      {copiedSession ? '✓ Copied!' : 'Copy'}
                     </button>
                   </div>
-
-                  {/* Inline edit form */}
-                  {editingZone?.id === zone.id && (
-                    <form onSubmit={saveEditZone} className="px-5 pb-5 border-t border-forest-100 bg-forest-50">
-                      <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide pt-4 mb-3">Edit Zone {zone.label}</p>
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                          <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400">
-                            <option value="">No category</option>
-                            {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
-                          <input type="number" min="1" value={editGroup} onChange={e => setEditGroup(e.target.value)}
-                            placeholder="e.g. 1"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
-                        <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
-                          placeholder="e.g. North side near the gate"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="submit" className="bg-forest-700 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-600 transition-colors">
-                          Save
-                        </button>
-                        <button type="button" onClick={() => setEditingZone(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-gray-600">
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                  <p className="text-forest-300 text-xs text-center mb-4">
+                    Students go to <span className="font-mono bg-forest-700 px-1 rounded">schoolsareforests.org/student</span> and enter this code
+                  </p>
+                  <button onClick={closeSession} disabled={sessionLoading}
+                    className="w-full bg-forest-700 hover:bg-forest-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50">
+                    {sessionLoading ? 'Closing…' : 'Close Session'}
+                  </button>
                 </div>
-              )
-            })}
+              ) : (
+                <div>
+                  <input type="text" value={sessionNotes} onChange={e => setSessionNotes(e.target.value)}
+                    placeholder="Notes (optional) — e.g. Grade 7B, Period 3"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3" />
+                  <div className="flex gap-3">
+                    <button onClick={startSession} disabled={sessionLoading || zones.length === 0}
+                      className="flex-1 bg-forest-700 text-white font-semibold py-2.5 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-sm"
+                      title={zones.length === 0 ? 'Create at least one zone first' : ''}>
+                      {sessionLoading ? 'Starting…' : zones.length === 0 ? 'Add zones first' : 'Start Session →'}
+                    </button>
+                    {sessions.length > 0 && !activeSession && (
+                      <button onClick={() => reactivateSession(sessions[0])} disabled={sessionLoading}
+                        className="flex-shrink-0 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50">
+                        Reuse {sessions[0].session_code}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ── CLASS SESSION PANEL ── */}
-        <div className={`rounded-xl p-5 mt-10 mb-4 ${activeSession ? 'bg-forest-800 text-white' : 'bg-white shadow-sm'}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className={`text-xs uppercase tracking-wide font-semibold mb-0.5 ${activeSession ? 'text-forest-300' : 'text-gray-400'}`}>
-                Class Session
-              </p>
-              <p className={`text-sm ${activeSession ? 'text-forest-100' : 'text-gray-500'}`}>
-                {activeSession
-                  ? `Active until ${formatExpiry(activeSession.expires_at)}${activeSession.notes ? ` — ${activeSession.notes}` : ''}`
-                  : 'Once your zones are ready, start a session to let students in'}
-              </p>
-            </div>
-            {activeSession && (
-              <span className="text-xs font-bold bg-green-500 text-white px-2.5 py-1 rounded-full uppercase tracking-wide flex-shrink-0">
-                Active
-              </span>
+        {/* ── TAB: VALIDATION ── */}
+        {activeTab === 'validation' && (
+          <div>
+            {/* Publish toggle — only enabled when validations are done */}
+            {(() => {
+              const allZonesValidated = zones.length > 0 && zones.every(z => {
+                const accessible = (treeCounts[z.id] || 0) - (inaccessibleCounts[z.id] || 0)
+                if (accessible === 0) return true
+                return (validationCounts[z.id] || 0) >= Math.max(1, Math.ceil(accessible / 10))
+              })
+              return (
+                <div className={`rounded-xl p-5 mb-6 flex items-center justify-between gap-4 ${allZonesValidated ? 'bg-white shadow-sm' : 'bg-gray-50 border border-gray-200'}`}>
+                  <div>
+                    <p className="font-semibold text-forest-800">Visible in Explore Schools</p>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {allZonesValidated
+                        ? published ? 'Your school is publicly visible on the map.' : 'Your school is hidden — toggle to publish.'
+                        : 'Complete all zone validations to publish your school.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={allZonesValidated ? togglePublished : undefined}
+                    disabled={togglingPublished || !allZonesValidated}
+                    className={`relative inline-flex h-7 w-14 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                      published && allZonesValidated ? 'bg-forest-600' : 'bg-gray-200'
+                    } ${!allZonesValidated ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${published && allZonesValidated ? 'translate-x-7' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              )
+            })()}
+
+            {/* Per-zone validation status */}
+            {zones.length === 0 ? (
+              <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm">
+                <p className="text-4xl mb-3">✅</p>
+                <p className="font-medium">No zones yet</p>
+                <p className="text-sm mt-1">Create zones in the Zones tab first</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {zones.map(zone => {
+                  const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
+                  const required = Math.max(1, Math.ceil(accessibleCount / 10))
+                  const done = validationCounts[zone.id] || 0
+                  const complete = accessibleCount === 0 || done >= required
+                  return (
+                    <button key={zone.id} onClick={() => router.push(`/teacher/zone/${zone.id}`)}
+                      className="w-full bg-white rounded-xl p-5 shadow-sm flex items-center gap-4 hover:bg-forest-50 transition-colors text-left">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${complete ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}`}>
+                        {complete ? '✓' : zone.label}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-forest-800">Zone {zone.label}{zone.category ? ` — ${zone.category}` : ''}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {accessibleCount === 0
+                            ? 'No measurable trees yet'
+                            : `${done} of ${required} validations done · ${accessibleCount} trees`}
+                        </p>
+                      </div>
+                      {/* Progress bar */}
+                      {accessibleCount > 0 && (
+                        <div className="w-24 flex-shrink-0">
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${complete ? 'bg-green-500' : 'bg-amber-400'}`}
+                              style={{ width: `${Math.min(100, (done / required) * 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 text-right mt-0.5">{Math.min(100, Math.round((done / required) * 100))}%</p>
+                        </div>
+                      )}
+                      <span className="text-gray-300 text-xl flex-shrink-0">›</span>
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
-
-          {activeSession ? (
-            <div>
-              <div className="flex items-center gap-3 bg-forest-900/50 rounded-xl px-5 py-4 mb-4">
-                <span className="font-mono text-3xl font-bold text-white tracking-[0.25em] flex-1 text-center">
-                  {activeSession.session_code}
-                </span>
-                <button
-                  onClick={copySessionCode}
-                  className="flex-shrink-0 bg-white text-forest-800 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-50 transition-colors"
-                >
-                  {copiedSession ? '✓ Copied!' : 'Copy'}
-                </button>
-              </div>
-              <p className="text-forest-300 text-xs text-center mb-4">
-                Students go to <span className="font-mono bg-forest-700 px-1 rounded">schoolsareforests.org/student</span> and enter this code
-              </p>
-              <button
-                onClick={closeSession}
-                disabled={sessionLoading}
-                className="w-full bg-forest-700 hover:bg-forest-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {sessionLoading ? 'Closing…' : 'Close Session'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <input
-                type="text"
-                value={sessionNotes}
-                onChange={e => setSessionNotes(e.target.value)}
-                placeholder="Notes (optional) — e.g. Grade 7B, Period 3"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={startSession}
-                  disabled={sessionLoading || zones.length === 0}
-                  className="flex-1 bg-forest-700 text-white font-semibold py-2.5 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-sm"
-                  title={zones.length === 0 ? 'Create at least one zone first' : ''}
-                >
-                  {sessionLoading ? 'Starting…' : zones.length === 0 ? 'Add zones first' : 'Start Session →'}
-                </button>
-                {sessions.length > 0 && !activeSession && (
-                  <button
-                    onClick={() => reactivateSession(sessions[0])}
-                    disabled={sessionLoading}
-                    className="flex-shrink-0 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    title={`Reactivate code: ${sessions[0].session_code}`}
-                  >
-                    Reuse {sessions[0].session_code}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Teacher Guide ── */}
-        <div className="mt-10 space-y-4">
-          <h2 className="text-xl font-bold text-forest-800">Teacher Guide</h2>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
-            <p className="font-semibold text-forest-800 mb-1">1. What are zones?</p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Zones are sections of your school grounds — each one assigned to a student group. Think of them as measurement territories: Zone A might be the playground, Zone B the garden, etc. Each zone gets a letter (A, B, C…) and a location type. Divide them so each group has a similar number of trees to measure.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
-            <p className="font-semibold text-forest-800 mb-1">2. How many zones do I need?</p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              One zone per student group. If you have 30 students working in groups of 5, create 6 zones. Try to balance the number of trees per zone so the workload is even across groups.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
-            <p className="font-semibold text-forest-800 mb-1">3. Starting a session</p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Once your zones are ready, click <strong>Start Session</strong>. You'll get a 6-character code (e.g. <span className="font-mono bg-gray-100 px-1.5 rounded">XF4T2K</span>). Project it on screen or write it on the board. Students go to <span className="font-mono text-xs bg-gray-100 px-1.5 rounded">schoolsareforests.org/student</span> and enter it. Sessions last 3 hours — close them when class ends.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
-            <p className="font-semibold text-forest-800 mb-1">4. What do students need?</p>
-            <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              One phone or tablet per group (any browser, no app to install), plus:
-            </p>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>📏 A measuring tape — for trunk circumference and crown diameter</li>
-              <li>📐 A cardboard triangle — for estimating tree height</li>
-              <li>📄 Printed field sheets — if your school has limited internet access</li>
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
-            <p className="font-semibold text-forest-800 mb-1">5. Validating the data</p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              After the session, go to each zone to review submissions. Each zone needs at least 1 validation per 10 trees. Click on a zone to see the tree list, then validate individual records — checking photos, species ID, and measurements.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
