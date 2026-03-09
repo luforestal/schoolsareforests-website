@@ -412,9 +412,9 @@ export default function TeacherDashboard() {
 
   const TABS = [
     { id: 'use', label: 'How to Use' },
+    { id: 'location', label: 'Location' },
     { id: 'zones', label: 'Zones' },
     { id: 'validation', label: 'Validation' },
-    { id: 'location', label: 'Location' },
   ]
 
   return (
