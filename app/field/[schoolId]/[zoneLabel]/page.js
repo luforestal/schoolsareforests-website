@@ -23,6 +23,7 @@ export default function ZonePage() {
   const [zp2File, setZp2File] = useState(null)
   const [zp2Preview, setZp2Preview] = useState(null)
   const [savingZonePhotos, setSavingZonePhotos] = useState(false)
+  const [zonePhotoError, setZonePhotoError] = useState('')
 
   useEffect(() => {
     const saved = sessionStorage.getItem('saf_student_name')
@@ -65,19 +66,33 @@ export default function ZonePage() {
   const handleSaveZonePhotos = async () => {
     if (!zp1File || !zp2File) return
     setSavingZonePhotos(true)
+    setZonePhotoError('')
 
     const upload = async (file, slot) => {
       const ext = file.name.split('.').pop()
       const filename = `${zone.id}-ref${slot}-${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('zone-photos').upload(filename, file)
-      if (error) return null
+      if (error) return { url: null, error: error.message }
       const { data } = supabase.storage.from('zone-photos').getPublicUrl(filename)
-      return data.publicUrl
+      return { url: data.publicUrl, error: null }
     }
 
-    const [url1, url2] = await Promise.all([upload(zp1File, 1), upload(zp2File, 2)])
-    await supabase.from('zones').update({ photo1_url: url1, photo2_url: url2 }).eq('id', zone.id)
-    setZone(z => ({ ...z, photo1_url: url1, photo2_url: url2 }))
+    const [r1, r2] = await Promise.all([upload(zp1File, 1), upload(zp2File, 2)])
+    if (r1.error || r2.error) {
+      setZonePhotoError(`Upload failed: ${r1.error || r2.error}. Make sure the zone-photos bucket exists in Supabase Storage.`)
+      setSavingZonePhotos(false)
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('zones').update({ photo1_url: r1.url, photo2_url: r2.url }).eq('id', zone.id)
+    if (updateError) {
+      setZonePhotoError(`Could not save to database: ${updateError.message}`)
+      setSavingZonePhotos(false)
+      return
+    }
+
+    setZone(z => ({ ...z, photo1_url: r1.url, photo2_url: r2.url }))
     setShowZonePhotos(false)
     setSavingZonePhotos(false)
   }
@@ -201,6 +216,11 @@ export default function ZonePage() {
             </label>
           </div>
 
+          {zonePhotoError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+              {zonePhotoError}
+            </div>
+          )}
           <button onClick={handleSaveZonePhotos}
             disabled={!zp1File || !zp2File || savingZonePhotos}
             className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-lg">
