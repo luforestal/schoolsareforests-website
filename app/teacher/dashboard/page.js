@@ -305,7 +305,7 @@ export default function TeacherDashboard() {
     setTogglingPublished(false)
   }
 
-  const [activeTab, setActiveTab] = useState('zones')
+  const [activeTab, setActiveTab] = useState('use')
 
   // Parse "lat, lng" string from Google Maps
   const parseCoords = (raw) => {
