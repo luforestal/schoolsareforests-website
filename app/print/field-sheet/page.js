@@ -321,7 +321,7 @@ export default function FieldSheetPage() {
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-gray-200 flex items-center justify-between text-xs text-gray-400">
           <span>Schools Are Forests · schoolsareforests.org</span>
-          <span>Questions? hello@schoolsareforests.org</span>
+          <span>Questions? <strong className="text-gray-500">schoolsareforests.org/contact</strong></span>
         </div>
       </div>
     </>
