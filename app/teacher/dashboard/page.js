@@ -365,84 +365,6 @@ export default function TeacherDashboard() {
           </button>
         </div>
 
-        {/* ── CLASS SESSION PANEL ── */}
-        <div className={`rounded-xl p-5 mb-8 ${activeSession ? 'bg-forest-800 text-white' : 'bg-white shadow-sm'}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className={`text-xs uppercase tracking-wide font-semibold mb-0.5 ${activeSession ? 'text-forest-300' : 'text-gray-400'}`}>
-                Class Session
-              </p>
-              <p className={`text-sm ${activeSession ? 'text-forest-100' : 'text-gray-500'}`}>
-                {activeSession
-                  ? `Active until ${formatExpiry(activeSession.expires_at)}${activeSession.notes ? ` — ${activeSession.notes}` : ''}`
-                  : 'Give students a short code to access the field inventory'}
-              </p>
-            </div>
-            {activeSession && (
-              <span className="text-xs font-bold bg-green-500 text-white px-2.5 py-1 rounded-full uppercase tracking-wide flex-shrink-0">
-                Active
-              </span>
-            )}
-          </div>
-
-          {activeSession ? (
-            /* Active session: show big code */
-            <div>
-              <div className="flex items-center gap-3 bg-forest-900/50 rounded-xl px-5 py-4 mb-4">
-                <span className="font-mono text-3xl font-bold text-white tracking-[0.25em] flex-1 text-center">
-                  {activeSession.session_code}
-                </span>
-                <button
-                  onClick={copySessionCode}
-                  className="flex-shrink-0 bg-white text-forest-800 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-50 transition-colors"
-                >
-                  {copiedSession ? '✓ Copied!' : 'Copy'}
-                </button>
-              </div>
-              <p className="text-forest-300 text-xs text-center mb-4">
-                Students go to <span className="font-mono bg-forest-700 px-1 rounded">schoolsareforests.org/student</span> and enter this code
-              </p>
-              <button
-                onClick={closeSession}
-                disabled={sessionLoading}
-                className="w-full bg-forest-700 hover:bg-forest-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {sessionLoading ? 'Closing…' : 'Close Session'}
-              </button>
-            </div>
-          ) : (
-            /* No active session */
-            <div>
-              <input
-                type="text"
-                value={sessionNotes}
-                onChange={e => setSessionNotes(e.target.value)}
-                placeholder="Notes (optional) — e.g. Grade 7B, Period 3"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={startSession}
-                  disabled={sessionLoading}
-                  className="flex-1 bg-forest-700 text-white font-semibold py-2.5 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-sm"
-                >
-                  {sessionLoading ? 'Starting…' : 'Start Session →'}
-                </button>
-                {sessions.length > 0 && !activeSession && (
-                  <button
-                    onClick={() => reactivateSession(sessions[0])}
-                    disabled={sessionLoading}
-                    className="flex-shrink-0 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    title={`Reactivate code: ${sessions[0].session_code}`}
-                  >
-                    Reuse {sessions[0].session_code}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-10">
           <div className="bg-white rounded-xl p-5 text-center shadow-sm">
@@ -464,7 +386,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Zones */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-bold text-forest-800">Campus Zones</h2>
           <button
             onClick={() => { setAddingZone(true); setNewZoneLabel(nextAvailableLetter()) }}
@@ -473,6 +395,9 @@ export default function TeacherDashboard() {
             + Add Zone
           </button>
         </div>
+        <p className="text-sm text-gray-400 mb-5">
+          Divide your school grounds into zones — one per student group. Create all zones before starting a session.
+        </p>
 
         {/* Add zone form */}
         {addingZone && (
@@ -661,16 +586,126 @@ export default function TeacherDashboard() {
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="mt-8 bg-forest-50 rounded-xl p-5 border border-forest-100">
-          <h3 className="font-semibold text-forest-800 mb-2">How to use with students</h3>
-          <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-            <li>Create zones for each area of your campus</li>
-            <li>Click <strong>Start Session</strong> in the panel above — a 6-letter code will appear</li>
-            <li>Project or share the code with your students</li>
-            <li>Students go to <span className="font-mono bg-white px-1 rounded">schoolsareforests.org/student</span> and enter the code</li>
-            <li>Close the session when class ends to prevent further entries</li>
-          </ol>
+        {/* ── CLASS SESSION PANEL ── */}
+        <div className={`rounded-xl p-5 mt-10 mb-4 ${activeSession ? 'bg-forest-800 text-white' : 'bg-white shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className={`text-xs uppercase tracking-wide font-semibold mb-0.5 ${activeSession ? 'text-forest-300' : 'text-gray-400'}`}>
+                Class Session
+              </p>
+              <p className={`text-sm ${activeSession ? 'text-forest-100' : 'text-gray-500'}`}>
+                {activeSession
+                  ? `Active until ${formatExpiry(activeSession.expires_at)}${activeSession.notes ? ` — ${activeSession.notes}` : ''}`
+                  : 'Once your zones are ready, start a session to let students in'}
+              </p>
+            </div>
+            {activeSession && (
+              <span className="text-xs font-bold bg-green-500 text-white px-2.5 py-1 rounded-full uppercase tracking-wide flex-shrink-0">
+                Active
+              </span>
+            )}
+          </div>
+
+          {activeSession ? (
+            <div>
+              <div className="flex items-center gap-3 bg-forest-900/50 rounded-xl px-5 py-4 mb-4">
+                <span className="font-mono text-3xl font-bold text-white tracking-[0.25em] flex-1 text-center">
+                  {activeSession.session_code}
+                </span>
+                <button
+                  onClick={copySessionCode}
+                  className="flex-shrink-0 bg-white text-forest-800 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-50 transition-colors"
+                >
+                  {copiedSession ? '✓ Copied!' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-forest-300 text-xs text-center mb-4">
+                Students go to <span className="font-mono bg-forest-700 px-1 rounded">schoolsareforests.org/student</span> and enter this code
+              </p>
+              <button
+                onClick={closeSession}
+                disabled={sessionLoading}
+                className="w-full bg-forest-700 hover:bg-forest-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {sessionLoading ? 'Closing…' : 'Close Session'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                type="text"
+                value={sessionNotes}
+                onChange={e => setSessionNotes(e.target.value)}
+                placeholder="Notes (optional) — e.g. Grade 7B, Period 3"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={startSession}
+                  disabled={sessionLoading || zones.length === 0}
+                  className="flex-1 bg-forest-700 text-white font-semibold py-2.5 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-sm"
+                  title={zones.length === 0 ? 'Create at least one zone first' : ''}
+                >
+                  {sessionLoading ? 'Starting…' : zones.length === 0 ? 'Add zones first' : 'Start Session →'}
+                </button>
+                {sessions.length > 0 && !activeSession && (
+                  <button
+                    onClick={() => reactivateSession(sessions[0])}
+                    disabled={sessionLoading}
+                    className="flex-shrink-0 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    title={`Reactivate code: ${sessions[0].session_code}`}
+                  >
+                    Reuse {sessions[0].session_code}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Teacher Guide ── */}
+        <div className="mt-10 space-y-4">
+          <h2 className="text-xl font-bold text-forest-800">Teacher Guide</h2>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+            <p className="font-semibold text-forest-800 mb-1">1. What are zones?</p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Zones are sections of your school grounds — each one assigned to a student group. Think of them as measurement territories: Zone A might be the playground, Zone B the garden, etc. Each zone gets a letter (A, B, C…) and a location type. Divide them so each group has a similar number of trees to measure.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+            <p className="font-semibold text-forest-800 mb-1">2. How many zones do I need?</p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              One zone per student group. If you have 30 students working in groups of 5, create 6 zones. Try to balance the number of trees per zone so the workload is even across groups.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+            <p className="font-semibold text-forest-800 mb-1">3. Starting a session</p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Once your zones are ready, click <strong>Start Session</strong>. You'll get a 6-character code (e.g. <span className="font-mono bg-gray-100 px-1.5 rounded">XF4T2K</span>). Project it on screen or write it on the board. Students go to <span className="font-mono text-xs bg-gray-100 px-1.5 rounded">schoolsareforests.org/student</span> and enter it. Sessions last 3 hours — close them when class ends.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+            <p className="font-semibold text-forest-800 mb-1">4. What do students need?</p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              One phone or tablet per group (any browser, no app to install), plus:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>📏 A measuring tape — for trunk circumference and crown diameter</li>
+              <li>📐 A cardboard triangle — for estimating tree height</li>
+              <li>📄 Printed field sheets — if your school has limited internet access</li>
+            </ul>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-forest-400">
+            <p className="font-semibold text-forest-800 mb-1">5. Validating the data</p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              After the session, go to each zone to review submissions. Each zone needs at least 1 validation per 10 trees. Click on a zone to see the tree list, then validate individual records — checking photos, species ID, and measurements.
+            </p>
+          </div>
         </div>
       </div>
     </div>
