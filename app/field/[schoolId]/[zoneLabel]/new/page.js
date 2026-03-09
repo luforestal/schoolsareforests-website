@@ -70,7 +70,7 @@ export default function NewTreePage() {
   const diamStep = useMetric ? '0.1' : '0.1'
 
   useEffect(() => {
-    const name = sessionStorage.getItem('saf_student_name')
+    const name = sessionStorage.getItem(`saf_student_name_${zoneLabel}`)
     if (!name) { router.push(`/field/${schoolId}/${zoneLabel}`); return }
 
     setGpsStatus('capturing')
@@ -201,7 +201,7 @@ export default function NewTreePage() {
     setError('')
     setSubmitting(true)
 
-    const recordedBy = sessionStorage.getItem('saf_student_name')
+    const recordedBy = sessionStorage.getItem(`saf_student_name_${zoneLabel}`)
 
     // Upload photos
     const uploadedUrls = []

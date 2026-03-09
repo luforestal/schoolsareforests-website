@@ -25,8 +25,10 @@ export default function ZonePage() {
   const [savingZonePhotos, setSavingZonePhotos] = useState(false)
   const [zonePhotoError, setZonePhotoError] = useState('')
 
+  const sessionKey = `saf_student_name_${zoneLabel}`
+
   useEffect(() => {
-    const saved = sessionStorage.getItem('saf_student_name')
+    const saved = sessionStorage.getItem(sessionKey)
     if (saved) { setName(saved); setStarted(true) }
 
     const load = async () => {
@@ -51,7 +53,7 @@ export default function ZonePage() {
 
   const handleStart = () => {
     if (!name.trim()) return
-    sessionStorage.setItem('saf_student_name', name.trim())
+    sessionStorage.setItem(sessionKey, name.trim())
     setStarted(true)
     if (!zone?.photo1_url || !zone?.photo2_url) setShowZonePhotos(true)
   }
@@ -256,7 +258,7 @@ export default function ZonePage() {
               <p className="text-forest-300 text-sm">
                 {t('field.recording_as')} <span className="text-white font-medium">{name}</span>
                 {' · '}
-                <button onClick={() => { sessionStorage.removeItem('saf_student_name'); setStarted(false) }}
+                <button onClick={() => { sessionStorage.removeItem(sessionKey); setStarted(false) }}
                   className="underline text-forest-300 hover:text-white">{t('field.change')}</button>
               </p>
             </div>
