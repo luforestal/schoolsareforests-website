@@ -897,11 +897,16 @@ export default function TeacherDashboard() {
               </p>
 
               <div className="bg-amber-50 rounded-xl p-4 mb-4 text-sm text-amber-800 space-y-1.5">
-                <p className="font-semibold mb-2">How to export a KML from Google Maps:</p>
-                <p>1. Open <strong>Google My Maps</strong> (mymaps.google.com)</p>
-                <p>2. Draw a polygon around your school grounds</p>
-                <p>3. Click the three dots next to your map → <strong>Export to KML</strong></p>
-                <p>4. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
+                <p className="font-semibold mb-2">How to create and export a KML from Google Earth:</p>
+                <p>1. Open <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-amber-900">Google Earth</a> in your browser</p>
+                <p>2. Search for your school using the search bar</p>
+                <p>3. In the left panel, click <strong>New Project</strong> → <strong>Create KML file</strong></p>
+                <p>4. Click <strong>New Feature</strong> → <strong>Draw polygon</strong></p>
+                <p>5. Click around the perimeter of your school to trace the boundary — close the shape by clicking the first point again</p>
+                <p>6. Give the polygon a name (e.g. "School boundary") and click <strong>Save</strong></p>
+                <p>7. In the left panel, click the three dots next to your project → <strong>Export as KML file</strong></p>
+                <p>8. Upload the downloaded <span className="font-mono">.kml</span> file here</p>
+                <p className="text-amber-600 text-xs mt-2">No Google Earth account? You can also use <a href="https://mymaps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google My Maps</a> — draw a polygon, then Export → KML.</p>
               </div>
 
               <label className="block cursor-pointer">
