@@ -900,8 +900,10 @@ export default function TeacherDashboard() {
                   <p>7. Click the <strong>three dots</strong> next to the project → <strong>Download</strong> → <strong>Download KML</strong></p>
                   <p>8. Upload the downloaded file here</p>
                 </div>
-                <label className="block cursor-pointer">
-                  <div className={`border-2 border-dashed rounded-xl px-4 py-6 text-center transition-colors ${kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'}`}>
+                <label className="block cursor-pointer"
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleKmlUpload({ target: { files: [f] } }) }}>
+                  <div className={`border-2 border-dashed rounded-xl px-4 py-8 text-center transition-colors ${kmlParsed ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-forest-300'}`}>
                     {kmlParsed ? (
                       <div className="text-green-700 text-sm">
                         <p className="text-xl mb-1">✓</p>
@@ -911,7 +913,7 @@ export default function TeacherDashboard() {
                     ) : (
                       <div className="text-gray-400 text-sm">
                         <p className="text-2xl mb-2">📄</p>
-                        <p>Click to upload a .kml file</p>
+                        <p>Drag & drop your .kml file here, or click to browse</p>
                       </div>
                     )}
                   </div>
