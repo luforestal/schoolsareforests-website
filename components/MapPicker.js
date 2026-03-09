@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
-export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel }) {
+export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel, perimeterGeojson }) {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
@@ -62,6 +62,16 @@ export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel 
         marker.setLatLng(e.latlng)
         setPickedCoords({ lat: e.latlng.lat, lng: e.latlng.lng })
       })
+
+      // Draw school perimeter if available
+      if (perimeterGeojson) {
+        try {
+          const geojson = typeof perimeterGeojson === 'string' ? JSON.parse(perimeterGeojson) : perimeterGeojson
+          L.geoJSON(geojson, {
+            style: { color: '#4ade80', weight: 1.5, opacity: 0.8, fillOpacity: 0.06 }
+          }).addTo(map)
+        } catch (_) {}
+      }
 
       mapInstanceRef.current = map
       markerRef.current = marker

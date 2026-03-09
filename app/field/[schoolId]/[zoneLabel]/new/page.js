@@ -59,6 +59,7 @@ export default function NewTreePage() {
   const [gpsStatus, setGpsStatus] = useState('idle') // 'idle' | 'capturing' | 'success' | 'error'
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [schoolLocation, setSchoolLocation] = useState(null)
+  const [schoolPerimeter, setSchoolPerimeter] = useState(null)
 
   // Unit conversion helpers — DB always stores metric
   const toMetricLen = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 0.3048   // ft → m
@@ -88,15 +89,20 @@ export default function NewTreePage() {
     supabase.from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
       .single().then(({ data }) => setZone(data))
 
-    supabase.from('schools').select('location, country').eq('id', schoolId)
+    supabase.from('schools').select('location, country, lat, lng, perimeter_geojson').eq('id', schoolId)
       .single().then(async ({ data: school }) => {
         if (!school) return
-        try {
-          const q = encodeURIComponent(school.location || school.country)
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`)
-          const results = await res.json()
-          if (results.length > 0) setSchoolLocation({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) })
-        } catch (_) {}
+        if (school.perimeter_geojson) setSchoolPerimeter(school.perimeter_geojson)
+        if (school.lat && school.lng) {
+          setSchoolLocation({ lat: school.lat, lng: school.lng })
+        } else {
+          try {
+            const q = encodeURIComponent(school.location || school.country)
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`)
+            const results = await res.json()
+            if (results.length > 0) setSchoolLocation({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) })
+          } catch (_) {}
+        }
       })
   }, [schoolId, zoneLabel, router])
 
@@ -601,6 +607,7 @@ export default function NewTreePage() {
           <MapPicker
             initialLat={coords?.lat ?? schoolLocation?.lat}
             initialLng={coords?.lng ?? schoolLocation?.lng}
+            perimeterGeojson={schoolPerimeter}
             onConfirm={({ lat, lng }) => {
               setCoords({ lat, lng })
               setGpsStatus('success')

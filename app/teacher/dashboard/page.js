@@ -396,6 +396,12 @@ export default function TeacherDashboard() {
     }).addTo(map)
     if (coordParsed) L.marker([coordParsed.lat, coordParsed.lng]).addTo(map)
     else if (school?.lat) L.marker([school.lat, school.lng]).addTo(map)
+    const perim = kmlParsed || (school?.perimeter_geojson ? JSON.parse(school.perimeter_geojson) : null)
+    if (perim) {
+      try {
+        L.geoJSON(perim, { style: { color: '#4ade80', weight: 1.5, opacity: 0.8, fillOpacity: 0.06 } }).addTo(map)
+      } catch (_) {}
+    }
     setLocationMapRef(map)
   }
 
