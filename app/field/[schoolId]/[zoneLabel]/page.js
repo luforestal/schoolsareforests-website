@@ -16,6 +16,8 @@ export default function ZonePage() {
   const [name, setName] = useState('')
   const [started, setStarted] = useState(false)
 
+  const [medal, setMedal] = useState(null) // '🥇' | '🥈' | '🥉' | null
+
   // Zone photos step
   const [showZonePhotos, setShowZonePhotos] = useState(false)
   const [zp1File, setZp1File] = useState(null)
@@ -43,7 +45,18 @@ export default function ZonePage() {
 
         // Show zone photos step if no photos yet
         if (!zoneData.photo1_url || !zoneData.photo2_url) {
-          if (sessionStorage.getItem('saf_student_name')) setShowZonePhotos(true)
+          if (sessionStorage.getItem(`saf_student_name_${zoneLabel}`)) setShowZonePhotos(true)
+        }
+
+        // Load medal from validations
+        const { data: validations } = await supabase
+          .from('tree_validations')
+          .select('accuracy_pct')
+          .eq('zone_id', zoneData.id)
+          .not('accuracy_pct', 'is', null)
+        if (validations?.length) {
+          const avg = validations.reduce((s, v) => s + v.accuracy_pct, 0) / validations.length
+          setMedal(avg >= 90 ? '🥇' : avg >= 75 ? '🥈' : avg >= 60 ? '🥉' : null)
         }
       }
       setLoading(false)
@@ -250,8 +263,13 @@ export default function ZonePage() {
             {t('field.back_zones')}
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-forest-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              {zoneLabel}
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-forest-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                {zoneLabel}
+              </div>
+              {medal && (
+                <span className="absolute -top-2 -right-2 text-xl">{medal}</span>
+              )}
             </div>
             <div>
               <h1 className="font-bold text-lg">{t('field.zone_title', { label: zoneLabel })}{zone?.category ? ` · ${zone.category}` : ''}</h1>

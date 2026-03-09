@@ -54,6 +54,10 @@ export default function NewTreePage() {
   const [suggestions, setSuggestions] = useState([])
   const [selectedConfidence, setSelectedConfidence] = useState(null)
 
+  // Celebration
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationEmojis, setCelebrationEmojis] = useState([])
+
   // GPS
   const [coords, setCoords] = useState(null)
   const [gpsStatus, setGpsStatus] = useState('idle') // 'idle' | 'capturing' | 'success' | 'error'
@@ -265,8 +269,45 @@ export default function NewTreePage() {
       )
     }
 
-    router.push(`/field/${schoolId}/${zoneLabel}`)
+    // Generate celebration emojis
+    const pool = ['🌳','🌿','⭐','✨','🎉','🍃','🌱','💚','🏆','🎊']
+    const emojis = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      emoji: pool[Math.floor(Math.random() * pool.length)],
+      left: 5 + Math.random() * 90,
+      delay: Math.random() * 0.8,
+      size: 1.5 + Math.random() * 2,
+      duration: 1.5 + Math.random() * 1,
+    }))
+    setCelebrationEmojis(emojis)
+    setShowCelebration(true)
+    setTimeout(() => router.push(`/field/${schoolId}/${zoneLabel}`), 2800)
   }
+
+  if (showCelebration) return (
+    <div className="fixed inset-0 z-50 bg-forest-800 flex flex-col items-center justify-center overflow-hidden">
+      <style>{`
+        @keyframes floatUp {
+          0%   { transform: translateY(100vh) scale(0.5); opacity: 1; }
+          100% { transform: translateY(-20vh) scale(1.2); opacity: 0; }
+        }
+      `}</style>
+      {celebrationEmojis.map(e => (
+        <span key={e.id} style={{
+          position: 'absolute',
+          left: `${e.left}%`,
+          bottom: 0,
+          fontSize: `${e.size}rem`,
+          animation: `floatUp ${e.duration}s ease-out ${e.delay}s forwards`,
+        }}>{e.emoji}</span>
+      ))}
+      <div className="text-center text-white z-10 px-8">
+        <div className="text-8xl mb-6 animate-bounce">🌳</div>
+        <h1 className="text-4xl font-bold mb-3">Tree saved!</h1>
+        <p className="text-forest-300 text-xl">+1 for your team! 🎉</p>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-forest-50">
