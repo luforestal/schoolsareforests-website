@@ -80,9 +80,10 @@ export default function FieldSheetPage() {
           <span className="text-green-700 text-xl mt-0.5">📋</span>
           <p className="text-xs text-green-800 leading-relaxed">
             Fill in one row per tree. Use the <strong>cardboard clinometer</strong> (back of this sheet) to measure height.
-            Measure trunk circumference at <strong>1.3 m from the ground</strong> (diameter tape reads diameter directly; regular tape: divide cm by π = 3.14).
+            Measure trunk at <strong>1.3 m from the ground</strong> (diameter tape reads diameter directly; regular tape: divide cm by π = 3.14).
             For crown, measure the <strong>widest point end-to-end</strong>.
             Health: <strong>H</strong> = healthy, <strong>S</strong> = stressed, <strong>D</strong> = dead/dying.
+            {' '}<strong>Multi-stem tree?</strong> Fill in the first stem in the tree's row, then use the rows immediately below for the extra stems — write only the trunk Ø and leave all other columns blank. Mark those extra rows with <em>"↑ stem"</em> in the Notes column.
           </p>
         </div>
 
