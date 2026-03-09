@@ -241,9 +241,21 @@ export default function NewTreePage() {
 
     if (treeErr) { setError(treeErr.message); setSubmitting(false); return }
 
-    // Save additional photos to tree_photos table
+    // Tree saved — show celebration immediately
+    const pool = ['🌳','🌿','⭐','✨','🎉','🍃','🌱','💚','🏆','🎊']
+    setCelebrationEmojis(Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      emoji: pool[Math.floor(Math.random() * pool.length)],
+      left: 5 + Math.random() * 90,
+      delay: Math.random() * 0.8,
+      size: 1.5 + Math.random() * 2,
+      duration: 1.5 + Math.random() * 1,
+    })))
+    setShowCelebration(true)
+
+    // Save secondary data in background (don't block celebration)
     if (treeData && uploadedUrls.length > 1) {
-      await supabase.from('tree_photos').insert(
+      supabase.from('tree_photos').insert(
         uploadedUrls.slice(1).map((url, i) => ({
           tree_id: treeData.id,
           photo_url: url,
@@ -251,11 +263,9 @@ export default function NewTreePage() {
         }))
       )
     }
-
-    // Save stems
     if (!inaccessible && treeData) {
       const activeStems = isMultistem ? stems : [{ ...stems[0], measureHeight: '1.3' }]
-      await supabase.from('tree_stems').insert(
+      supabase.from('tree_stems').insert(
         activeStems.map((s, i) => ({
           tree_id: treeData.id,
           stem_number: i + 1,
@@ -269,18 +279,6 @@ export default function NewTreePage() {
       )
     }
 
-    // Generate celebration emojis
-    const pool = ['🌳','🌿','⭐','✨','🎉','🍃','🌱','💚','🏆','🎊']
-    const emojis = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      emoji: pool[Math.floor(Math.random() * pool.length)],
-      left: 5 + Math.random() * 90,
-      delay: Math.random() * 0.8,
-      size: 1.5 + Math.random() * 2,
-      duration: 1.5 + Math.random() * 1,
-    }))
-    setCelebrationEmojis(emojis)
-    setShowCelebration(true)
     setTimeout(() => router.push(`/field/${schoolId}/${zoneLabel}`), 2800)
   }
 
