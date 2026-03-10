@@ -125,6 +125,7 @@ function SchoolsViewerInner() {
       const map = L.map(mapDivRef.current, {
         center: [20, 0],
         zoom: 2,
+        minZoom: 2,
         zoomControl: false,
       })
       const tile = L.tileLayer(TILE_LAYERS.satellite.url, { attribution: TILE_LAYERS.satellite.attribution, maxZoom: 19 })
