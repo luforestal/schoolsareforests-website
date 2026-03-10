@@ -69,6 +69,7 @@ function SchoolsViewerInner() {
   const [filterHealth, setFilterHealth] = useState(null)
   const [filterDiamBin, setFilterDiamBin] = useState(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [leftOpen, setLeftOpen] = useState(true)
   const [baseMap, setBaseMap] = useState('satellite')
   const tileLayerRef = useRef(null)
 
@@ -336,96 +337,111 @@ function SchoolsViewerInner() {
   )
 
   return (
-    <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="relative overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
 
-      {/* ── Left sidebar: filters + school list ── */}
-      <div className="w-64 flex flex-col border-r border-gray-200 bg-white flex-shrink-0 overflow-hidden z-10">
-        <div className="p-4 bg-forest-50 border-b border-forest-100 flex-shrink-0">
-          <h1 className="font-bold text-forest-800 text-base mb-3">Explore Schools</h1>
+      {/* ── Map (base layer, fills everything) ── */}
+      <div ref={mapDivRef} className="absolute inset-0" />
 
-          <select
-            value={filterCountry}
-            onChange={e => setFilterCountry(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400 mb-2"
-          >
-            <option value="">All countries</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-
-          {regions.length > 0 && (
-            <select
-              value={filterRegion}
-              onChange={e => setFilterRegion(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400 mb-2"
-            >
-              <option value="">All regions</option>
-              {regions.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          )}
-
-          <input
-            type="text"
-            value={filterName}
-            onChange={e => setFilterName(e.target.value)}
-            placeholder="Search school…"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
-          />
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loadingSchools ? (
-            <div className="text-center text-gray-400 text-sm py-8">Loading…</div>
-          ) : filteredSchools.length === 0 ? (
-            <div className="text-center text-gray-400 text-sm py-8">No schools found</div>
-          ) : filteredSchools.map(school => (
-            <button
-              key={school.id}
-              onClick={() => handleSelectSchool(school)}
-              className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-forest-50 transition-colors flex items-center gap-3 ${selectedSchool?.id === school.id ? 'bg-forest-50 border-l-[3px] border-l-forest-600' : ''}`}
-            >
-              {school.logo_url
-                ? <img src={school.logo_url} alt="" className="h-9 w-9 object-contain rounded-lg bg-gray-50 flex-shrink-0" />
-                : <div className="h-9 w-9 rounded-lg bg-forest-100 flex items-center justify-center flex-shrink-0 text-base">🏫</div>
-              }
-              <div className="min-w-0">
-                <p className="font-medium text-forest-800 text-sm truncate">{school.name}</p>
-                <p className="text-xs text-gray-400 truncate">{school.region ? `${school.region} · ` : ''}{school.country}</p>
+      {/* ── Left panel (floating, collapsible) ── */}
+      <div className="absolute top-3 left-3 bottom-3 z-[500] flex flex-col" style={{ width: leftOpen ? '15rem' : 'auto' }}>
+        {leftOpen ? (
+          <div className="flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden h-full">
+            <div className="p-4 bg-forest-50 border-b border-forest-100 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h1 className="font-bold text-forest-800 text-base">Explore Schools</h1>
+                <button
+                  onClick={() => setLeftOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 leading-none text-lg"
+                  title="Hide panel"
+                >✕</button>
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* ── Map (center, fills remaining space) ── */}
-      <div className="flex-1 relative overflow-hidden">
-        <div ref={mapDivRef} className="absolute inset-0" />
+              <select
+                value={filterCountry}
+                onChange={e => setFilterCountry(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400 mb-2"
+              >
+                <option value="">All countries</option>
+                {countries.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
 
-        {/* Base map switcher */}
-        <div className="absolute top-3 left-3 z-[1000] flex gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-1">
-          {Object.entries(TILE_LAYERS).map(([key, cfg]) => (
-            <button
-              key={key}
-              onClick={() => setBaseMap(key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${baseMap === key ? 'bg-forest-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              {cfg.label}
-            </button>
-          ))}
-        </div>
+              {regions.length > 0 && (
+                <select
+                  value={filterRegion}
+                  onChange={e => setFilterRegion(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400 mb-2"
+                >
+                  <option value="">All regions</option>
+                  {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
 
-        {/* Placeholder when no school selected */}
-        {!panelOpen && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg px-5 py-3 text-sm text-forest-700 font-medium pointer-events-none">
-            🌳 Click a tree marker or select a school to explore
+              <input
+                type="text"
+                value={filterName}
+                onChange={e => setFilterName(e.target.value)}
+                placeholder="Search school…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {loadingSchools ? (
+                <div className="text-center text-gray-400 text-sm py-8">Loading…</div>
+              ) : filteredSchools.length === 0 ? (
+                <div className="text-center text-gray-400 text-sm py-8">No schools found</div>
+              ) : filteredSchools.map(school => (
+                <button
+                  key={school.id}
+                  onClick={() => handleSelectSchool(school)}
+                  className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-forest-50 transition-colors flex items-center gap-3 ${selectedSchool?.id === school.id ? 'bg-forest-50 border-l-[3px] border-l-forest-600' : ''}`}
+                >
+                  {school.logo_url
+                    ? <img src={school.logo_url} alt="" className="h-9 w-9 object-contain rounded-lg bg-gray-50 flex-shrink-0" />
+                    : <div className="h-9 w-9 rounded-lg bg-forest-100 flex items-center justify-center flex-shrink-0 text-base">🏫</div>
+                  }
+                  <div className="min-w-0">
+                    <p className="font-medium text-forest-800 text-sm truncate">{school.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{school.region ? `${school.region} · ` : ''}{school.country}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
+        ) : (
+          <button
+            onClick={() => setLeftOpen(true)}
+            className="bg-white rounded-xl shadow-lg w-10 h-10 flex items-center justify-center text-forest-700 hover:bg-forest-50 transition-colors text-lg"
+            title="Show schools"
+          >
+            ☰
+          </button>
         )}
       </div>
 
-      {/* ── Right panel: school detail ── */}
-      <div
-        className={`flex-shrink-0 flex flex-col bg-white border-l border-gray-200 overflow-hidden transition-all duration-300 ${panelOpen ? 'w-96' : 'w-0'}`}
-      >
-        {selectedSchool && panelOpen && (
+      {/* ── Base map switcher (top center) ── */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-1">
+        {Object.entries(TILE_LAYERS).map(([key, cfg]) => (
+          <button
+            key={key}
+            onClick={() => setBaseMap(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${baseMap === key ? 'bg-forest-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            {cfg.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Hint when no school selected */}
+      {!panelOpen && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg px-5 py-3 text-sm text-forest-700 font-medium pointer-events-none">
+          🌳 Click a tree marker or select a school to explore
+        </div>
+      )}
+
+      {/* ── Right panel (floating, slides in/out) ── */}
+      <div className={`absolute top-3 right-3 bottom-3 z-[500] w-96 flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300 ${panelOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full pointer-events-none'}`}>
+        {selectedSchool && (
           <>
             {/* School header */}
             <div className="bg-forest-800 text-white px-5 py-4 flex-shrink-0">
