@@ -1,10 +1,35 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
+const LAYERS = [
+  {
+    id: 'satellite',
+    label: '🛰️ Satellite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 19,
+  },
+  {
+    id: 'streets',
+    label: '🗺️ Streets',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  },
+  {
+    id: 'carto',
+    label: '✏️ Carto',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19,
+  },
+]
+
 export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel, perimeterGeojson }) {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
+  const tileLayerRef = useRef(null)
 
   const startLat = initialLat || 4.0
   const startLng = initialLng || 9.0
@@ -12,6 +37,22 @@ export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel,
   const [pickedCoords, setPickedCoords] = useState(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
   )
+  const [activeLayer, setActiveLayer] = useState('satellite')
+
+  // Switch tile layer when activeLayer changes
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+    import('leaflet').then(mod => {
+      const L = mod.default
+      if (tileLayerRef.current) map.removeLayer(tileLayerRef.current)
+      const layer = LAYERS.find(l => l.id === activeLayer)
+      tileLayerRef.current = L.tileLayer(layer.url, {
+        attribution: layer.attribution,
+        maxZoom: layer.maxZoom,
+      }).addTo(map)
+    })
+  }, [activeLayer])
 
   useEffect(() => {
     // Inject Leaflet CSS once
@@ -43,13 +84,11 @@ export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel,
         zoom: initialLat ? 18 : 3,
       })
 
-      L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        {
-          attribution: 'Tiles &copy; Esri',
-          maxZoom: 19,
-        }
-      ).addTo(map)
+      const defaultLayer = LAYERS.find(l => l.id === 'satellite')
+      tileLayerRef.current = L.tileLayer(defaultLayer.url, {
+        attribution: defaultLayer.attribution,
+        maxZoom: defaultLayer.maxZoom,
+      }).addTo(map)
 
       const marker = L.marker([startLat, startLng], { draggable: true }).addTo(map)
 
@@ -104,7 +143,24 @@ export default function MapPicker({ initialLat, initialLng, onConfirm, onCancel,
       </div>
 
       {/* Map container */}
-      <div ref={mapRef} className="flex-1" />
+      <div ref={mapRef} className="flex-1 relative">
+        {/* Layer switcher */}
+        <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1">
+          {LAYERS.map(layer => (
+            <button
+              key={layer.id}
+              onClick={() => setActiveLayer(layer.id)}
+              className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-md transition-colors ${
+                activeLayer === layer.id
+                  ? 'bg-forest-700 text-white'
+                  : 'bg-white text-gray-700 hover:bg-forest-50'
+              }`}
+            >
+              {layer.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Coordinates footer */}
       <div className="bg-forest-900 text-white px-4 py-3 text-center flex-shrink-0">
