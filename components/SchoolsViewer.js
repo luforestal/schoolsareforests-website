@@ -153,6 +153,13 @@ function SchoolsViewerInner() {
     if (schoolMarkerRef.current) { schoolMarkerRef.current.remove(); schoolMarkerRef.current = null }
 
     const treesWithCoords = trees.filter(t => t.lat && t.lng)
+
+    // Hide school 🌳 markers when zoomed into a school, show them when no trees loaded
+    markersRef.current.forEach(m => {
+      if (treesWithCoords.length > 0) m.remove()
+      else m.addTo(mapRef.current)
+    })
+
     if (treesWithCoords.length === 0) return
 
     // Compute centroid
