@@ -36,11 +36,12 @@ export default function Navbar() {
   const t = useT()
 
   const navLinks = [
-    { href: '/',        label: t('nav.home') },
-    { href: '/about',   label: t('nav.about') },
-    { href: '/schools', label: t('nav.schools') },
-    { href: '/tool',    label: t('nav.tool') },
-    { href: '/contact', label: t('nav.contact') },
+    { href: '/',           label: t('nav.home') },
+    { href: '/about',      label: t('nav.about') },
+    { href: '/schools',    label: t('nav.schools') },
+    { href: '/tool',       label: t('nav.tool') },
+    { href: '/resources',  label: t('nav.resources') },
+    { href: '/contact',    label: t('nav.contact') },
   ]
 
   return (
