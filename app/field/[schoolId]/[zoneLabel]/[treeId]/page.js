@@ -26,11 +26,22 @@ export default function TreeDetailPage() {
 
   // Edit measurements
   const [editingMeasurements, setEditingMeasurements] = useState(false)
-  const [editHeight, setEditHeight] = useState('')
+  const [editClinoDistance, setEditClinoDistance] = useState('')
+  const [editMeasurerHeight, setEditMeasurerHeight] = useState('')
+  const [editClinoAngle, setEditClinoAngle] = useState('')
   const [editCrownNS, setEditCrownNS] = useState('')
   const [editCrownEW, setEditCrownEW] = useState('')
   const [editHealth, setEditHealth] = useState('')
   const [editStems, setEditStems] = useState([])
+
+  const editComputedHeightM = (() => {
+    const D = parseFloat(editClinoDistance)
+    const h = parseFloat(editMeasurerHeight)
+    const readAngle = parseFloat(editClinoAngle)
+    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
+    const elevRad = (90 - readAngle) * Math.PI / 180
+    return D * Math.tan(elevRad) + h
+  })()
 
   useEffect(() => {
     const load = async () => {
@@ -40,7 +51,9 @@ export default function TreeDetailPage() {
       setTree(treeData)
       setEditCommon(treeData.species_common || '')
       setEditScientific(treeData.species_scientific || '')
-      setEditHeight(treeData.height_m?.toString() || '')
+      setEditClinoDistance(treeData.clinometer_distance_m?.toString() || '')
+      setEditMeasurerHeight(treeData.measurer_eye_height_m?.toString() || '')
+      setEditClinoAngle(treeData.clinometer_angle_deg?.toString() || '')
       setEditCrownNS(treeData.crown_ns_m?.toString() || '')
       setEditCrownEW(treeData.crown_ew_m?.toString() || '')
       setEditHealth(treeData.health_status || '')
@@ -80,7 +93,10 @@ export default function TreeDetailPage() {
   const handleSaveMeasurements = async () => {
     setSaving(true)
     await supabase.from('trees').update({
-      height_m: parseFloat(editHeight) || null,
+      clinometer_distance_m: parseFloat(editClinoDistance) || null,
+      measurer_eye_height_m: parseFloat(editMeasurerHeight) || null,
+      clinometer_angle_deg: parseFloat(editClinoAngle) || null,
+      height_m: editComputedHeightM,
       crown_ns_m: parseFloat(editCrownNS) || null,
       crown_ew_m: parseFloat(editCrownEW) || null,
       health_status: editHealth || null,
@@ -94,7 +110,7 @@ export default function TreeDetailPage() {
       }).eq('id', stem.id)
     }
 
-    setTree(t => ({ ...t, height_m: parseFloat(editHeight) || null, crown_ns_m: parseFloat(editCrownNS) || null, crown_ew_m: parseFloat(editCrownEW) || null, health_status: editHealth || null }))
+    setTree(t => ({ ...t, height_m: editComputedHeightM, clinometer_distance_m: parseFloat(editClinoDistance) || null, measurer_eye_height_m: parseFloat(editMeasurerHeight) || null, clinometer_angle_deg: parseFloat(editClinoAngle) || null, crown_ns_m: parseFloat(editCrownNS) || null, crown_ew_m: parseFloat(editCrownEW) || null, health_status: editHealth || null }))
     setStems(editStems.map(s => ({ ...s, diameter_cm: parseFloat(s.diameter_cm), measurement_height_m: parseFloat(s.measurement_height_m) })))
     setEditingMeasurements(false)
     setSaving(false)
@@ -224,11 +240,31 @@ export default function TreeDetailPage() {
 
             {editingMeasurements ? (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Height (m)</label>
-                  <input type="number" step="0.1" min="0" value={editHeight}
-                    onChange={e => setEditHeight(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-gray-600">📐 Clinometer measurements</p>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Distance to trunk (m)</label>
+                    <input type="number" step="0.1" min="0" value={editClinoDistance}
+                      onChange={e => setEditClinoDistance(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Eye height (m)</label>
+                    <input type="number" step="0.1" min="0" value={editMeasurerHeight}
+                      onChange={e => setEditMeasurerHeight(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Clinometer angle (°)</label>
+                    <input type="number" step="1" min="1" max="89" value={editClinoAngle}
+                      onChange={e => setEditClinoAngle(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                  </div>
+                  {editComputedHeightM !== null && (
+                    <p className="text-xs text-forest-600 bg-forest-50 rounded-lg px-3 py-2">
+                      Calculated height: <strong>{editComputedHeightM.toFixed(1)} m</strong>
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -283,13 +319,16 @@ export default function TreeDetailPage() {
                     className="flex-1 bg-forest-700 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-forest-600 disabled:opacity-50">
                     {saving ? 'Saving…' : 'Save measurements'}
                   </button>
-                  <button onClick={() => { setEditingMeasurements(false); setEditHeight(tree.height_m?.toString() || ''); setEditCrownNS(tree.crown_ns_m?.toString() || ''); setEditCrownEW(tree.crown_ew_m?.toString() || ''); setEditHealth(tree.health_status || ''); setEditStems(stems.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() }))) }}
+                  <button onClick={() => { setEditingMeasurements(false); setEditClinoDistance(tree.clinometer_distance_m?.toString() || ''); setEditMeasurerHeight(tree.measurer_eye_height_m?.toString() || ''); setEditClinoAngle(tree.clinometer_angle_deg?.toString() || ''); setEditCrownNS(tree.crown_ns_m?.toString() || ''); setEditCrownEW(tree.crown_ew_m?.toString() || ''); setEditHealth(tree.health_status || ''); setEditStems(stems.map(s => ({ ...s, diameter_cm: s.diameter_cm?.toString(), measurement_height_m: s.measurement_height_m?.toString() }))) }}
                     className="text-gray-400 text-sm px-4 hover:text-gray-600">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
-                <Row label="Height" value={tree.height_m ? `${tree.height_m} m` : '—'} />
+                {tree.clinometer_distance_m && <Row label="Distance to trunk" value={`${tree.clinometer_distance_m} m`} />}
+                {tree.measurer_eye_height_m && <Row label="Eye height" value={`${tree.measurer_eye_height_m} m`} />}
+                {tree.clinometer_angle_deg && <Row label="Clinometer angle" value={`${tree.clinometer_angle_deg}°`} />}
+                <Row label="Height (calculated)" value={tree.height_m ? `${tree.height_m.toFixed(1)} m` : '—'} />
                 <Row label="Crown N–S" value={tree.crown_ns_m ? `${tree.crown_ns_m} m` : '—'} />
                 <Row label="Crown W–E" value={tree.crown_ew_m ? `${tree.crown_ew_m} m` : '—'} />
                 {stems.map((stem, i) => (

@@ -33,10 +33,22 @@ export default function NewTreePage() {
   const [useMetric, setUseMetric] = useState(true)
   const [measureCircumference, setMeasureCircumference] = useState(false)
 
-  // Height & crown (always stored in m internally)
-  const [height, setHeight] = useState('')
+  // Height via clinometer (stored in m internally)
+  const [clinoDistance, setClinoDistance] = useState('')
+  const [measurerHeight, setMeasurerHeight] = useState('')
+  const [clinoAngle, setClinoAngle] = useState('') // angle read on protractor (e.g. 55°), elevation = 90 - this
   const [crownNS, setCrownNS] = useState('')
   const [crownEW, setCrownEW] = useState('')
+
+  // Computed tree height from clinometer readings (in meters)
+  const computedHeightM = (() => {
+    const D = toMetricLen(parseFloat(clinoDistance))
+    const h = toMetricLen(parseFloat(measurerHeight))
+    const readAngle = parseFloat(clinoAngle)
+    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
+    const elevRad = (90 - readAngle) * Math.PI / 180
+    return D * Math.tan(elevRad) + h
+  })()
 
   // Stems (diameter always stored in cm internally)
   const [isMultistem, setIsMultistem] = useState(false)
@@ -187,7 +199,8 @@ export default function NewTreePage() {
     }
     if (!photos[0]) return 'Please take at least the first photo (full tree).'
     if (!needsId && !speciesCommon.trim()) return 'Please enter the common species name, or tap "I don\'t know the species".'
-    if (!height) return 'Please enter the tree height.'
+    if (!clinoDistance || !measurerHeight || !clinoAngle) return 'Please enter all clinometer measurements (distance, eye height, and angle).'
+    if (computedHeightM === null || computedHeightM <= 0) return 'Invalid clinometer values — please check distance, eye height, and angle.'
     if (!crownNS) return 'Please enter the crown diameter (North–South).'
     if (!crownEW) return 'Please enter the crown diameter (West–East).'
     const activeStems = isMultistem ? stems : [stems[0]]
@@ -225,7 +238,10 @@ export default function NewTreePage() {
       recorded_by: recordedBy,
       species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
       species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
-      height_m: inaccessible ? null : toMetricLen(height),
+      height_m: inaccessible ? null : computedHeightM,
+      clinometer_distance_m: inaccessible ? null : toMetricLen(parseFloat(clinoDistance)),
+      measurer_eye_height_m: inaccessible ? null : toMetricLen(parseFloat(measurerHeight)),
+      clinometer_angle_deg: inaccessible ? null : parseFloat(clinoAngle),
       crown_ns_m: inaccessible ? null : toMetricLen(crownNS),
       crown_ew_m: inaccessible ? null : toMetricLen(crownEW),
       is_multistem: inaccessible ? false : isMultistem,
@@ -473,16 +489,43 @@ export default function NewTreePage() {
             {/* 3. Height & Crown */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
               <div>
-                <label className="block font-semibold text-forest-800 mb-1">Height *</label>
-                <p className="text-xs text-gray-400 mb-2">Total tree height in {lenUnit}</p>
-                <div className="flex items-center gap-2">
-                  <input type="number" step={lenStep} min="0" value={height} onChange={e => setHeight(e.target.value)}
-                    placeholder={useMetric ? 'e.g. 8.5' : 'e.g. 28'}
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                  <span className="text-gray-500 font-medium w-6">{lenUnit}</span>
+                <label className="block font-semibold text-forest-800 mb-1">📐 Height — clinometer measurements *</label>
+                <p className="text-xs text-gray-400 mb-3">Your teacher will use these to calculate the tree height in class</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Distance to trunk ({lenUnit})</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step={lenStep} min="0" value={clinoDistance} onChange={e => setClinoDistance(e.target.value)}
+                        placeholder={useMetric ? 'e.g. 10' : 'e.g. 33'}
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      <span className="text-gray-500 text-sm w-6">{lenUnit}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Your eye height ({lenUnit})</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step={lenStep} min="0" value={measurerHeight} onChange={e => setMeasurerHeight(e.target.value)}
+                        placeholder={useMetric ? 'e.g. 1.5' : 'e.g. 5'}
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      <span className="text-gray-500 text-sm w-6">{lenUnit}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Clinometer angle (°) — number the string points to</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step="1" min="1" max="89" value={clinoAngle} onChange={e => setClinoAngle(e.target.value)}
+                        placeholder="e.g. 55"
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                      <span className="text-gray-500 text-sm w-4">°</span>
+                    </div>
+                  </div>
                 </div>
-                {!useMetric && height && (
-                  <p className="text-xs text-gray-400 mt-1">≈ {(parseFloat(height) * 0.3048).toFixed(2)} m</p>
+                {computedHeightM !== null && (
+                  <div className="mt-3 bg-forest-50 border border-forest-200 rounded-lg px-4 py-2.5 flex items-center gap-2">
+                    <span className="text-forest-600 text-sm">Calculated height:</span>
+                    <span className="font-bold text-forest-800 text-sm">{computedHeightM.toFixed(1)} m</span>
+                    <span className="text-gray-400 text-xs">(auto-saved)</span>
+                  </div>
                 )}
               </div>
               <div>

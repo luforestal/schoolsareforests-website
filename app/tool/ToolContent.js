@@ -78,7 +78,7 @@ export default function ToolContent() {
               <div className="text-3xl mb-3">📐</div>
               <h3 className="font-semibold text-forest-800 mb-2">Trigonometry</h3>
               <p className="text-gray-500 text-sm leading-relaxed">
-                Students use a homemade clinometer to sight the treetop and apply the 45° rule — putting tan, angles, and right triangles to work in the real world.
+                Students use a protractor clinometer to measure the angle to the treetop, then apply trigonometry (tan) to calculate the real height — putting right triangles to work in the real world.
               </p>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
