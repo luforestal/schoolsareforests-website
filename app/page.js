@@ -1,9 +1,15 @@
 'use client'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import WorldMapWrapper from '@/components/WorldMapWrapper'
 import VolunteerCard from '@/components/VolunteerCard'
 import { schools } from '@/data/schools'
 import { useT } from '@/lib/i18n'
+
+const PilotBadge = dynamic(
+  () => import('@/components/PilotBadge').then(m => m.PilotBadge),
+  { ssr: false }
+)
 
 export default function HomePage() {
   const t = useT()
@@ -106,13 +112,18 @@ export default function HomePage() {
                 key={school.id}
                 className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
-                <div className="h-32 flex items-center justify-center bg-forest-50 p-4">
+                <div className="relative h-32 flex items-center justify-center bg-forest-50 p-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={school.logo}
                     alt={school.name}
                     className="max-h-full max-w-full object-contain"
                   />
+                  {school.pilot && (
+                    <div className="absolute top-1 right-1" title="Pilot School — Founding Member & Trailblazer">
+                      <PilotBadge size={52}/>
+                    </div>
+                  )}
                 </div>
                 <div className="p-5">
                   <h3 className="font-semibold text-forest-800 text-base mb-1">{school.name}</h3>
@@ -154,6 +165,26 @@ export default function HomePage() {
               <p className="text-gray-500 leading-relaxed">{t('home.what_data_body')}</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Certification teaser ── */}
+      <section className="py-20 px-4 bg-forest-900 text-white text-center">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-5xl mb-6">🌱</div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Is your school a forest?</h2>
+          <p className="text-forest-300 text-lg leading-relaxed mb-3">
+            Map your trees. Measure them with your students. Get certified by Schools Are Forests NGO.
+          </p>
+          <p className="text-forest-400 text-sm mb-10">
+            ¿Es tu escuela un bosque? · Certifica tu escuela
+          </p>
+          <Link
+            href="/tool"
+            className="bg-white text-forest-800 font-bold px-10 py-4 rounded-full hover:bg-forest-50 transition-colors text-lg shadow-lg inline-block"
+          >
+            Get your school certified →
+          </Link>
         </div>
       </section>
 

@@ -4,6 +4,10 @@ const CertificationBadge = dynamic(
   () => import('@/components/CertificationBadge').then(m => m.CertificationBadge),
   { ssr: false }
 )
+const PilotBadge = dynamic(
+  () => import('@/components/PilotBadge').then(m => m.PilotBadge),
+  { ssr: false }
+)
 
 const LEVELS = [
   { level: 'seedling',    label: 'Seedling',    sublabel: 'Level 1' },
@@ -28,6 +32,27 @@ export default function CertificationsPreview() {
               <p className="text-gray-400 text-xs">{sublabel}</p>
             </div>
           ))}
+        </div>
+
+        {/* Pilot badge */}
+        <h2 className="text-xl font-bold text-forest-700 mb-4 mt-4">Pilot School Badge</h2>
+        <p className="text-gray-500 mb-6 text-sm">Founding Member &amp; Trailblazer — assigned to all current pilot schools</p>
+        <div className="flex flex-wrap gap-6 mb-16">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+            <PilotBadge size={140}/>
+            <p className="font-semibold text-amber-800 text-sm">Pilot School</p>
+            <p className="text-gray-400 text-xs">No name</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+            <PilotBadge schoolName="Lincoln Elementary" size={140}/>
+            <p className="font-semibold text-amber-800 text-sm">With school name</p>
+            <p className="text-gray-400 text-xs">140px</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+            <PilotBadge size={220}/>
+            <p className="font-semibold text-amber-800 text-sm">Full size</p>
+            <p className="text-gray-400 text-xs">220px</p>
+          </div>
         </div>
 
         <h2 className="text-xl font-bold text-forest-700 mb-6">Full size preview</h2>

@@ -12,6 +12,8 @@ export const schools = [
     coordinates: [-121.76607045199444, 38.55449079045209],
     trees: 90,
     logo: 'https://luforestal.github.io/SchoolTreeMap/logos/wildav.png',
+    pilot: true,
+    pilotYear: 2025,
   },
   {
     id: 'coocol',
@@ -21,6 +23,8 @@ export const schools = [
     coordinates: [-117.29173912864394, 34.05235347377958],
     trees: 75,
     logo: 'https://luforestal.github.io/SchoolTreeMap/logos/coocol.png',
+    pilot: true,
+    pilotYear: 2025,
   },
   {
     id: 'rutcol',
@@ -30,5 +34,7 @@ export const schools = [
     coordinates: [-117.38665961886166, 34.072121501045814],
     trees: 36,
     logo: 'https://luforestal.github.io/SchoolTreeMap/logos/rutcol.png',
+    pilot: true,
+    pilotYear: 2025,
   },
 ]
