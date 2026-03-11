@@ -1,5 +1,6 @@
 'use client'
-import { CertificationBadge } from '@/components/CertificationBadge'
+import dynamic from 'next/dynamic'
+const CertificationBadge = dynamic(() => import('@/components/CertificationBadge').then(m => m.CertificationBadge), { ssr: false })
 
 const LEVELS = [
   { level: 'seed',       label: 'Seed / Semilla',             year: 'Year 1' },

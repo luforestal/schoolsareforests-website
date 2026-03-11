@@ -1,3 +1,4 @@
+'use client'
 /**
  * CertificationBadge — SVG seal for each certification level.
  * levels: seed | plantula | arbusto | arbol_joven | arbol | bosque
