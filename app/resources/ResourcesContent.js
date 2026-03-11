@@ -156,8 +156,22 @@ export default function ResourcesContent() {
           <p className="text-center text-gray-500 mb-10">{t('resources.videos_subtitle')}</p>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Placeholder cards — replace href and title when ready */}
-            {[1, 2, 3, 4].map(i => (
+            {/* Clinometer video */}
+            <a
+              href="https://www.youtube.com/watch?v=sKOz0G58xqw"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-xl border border-gray-200 p-6 flex items-center gap-4 hover:border-forest-300 hover:shadow-sm transition-all group"
+            >
+              <div className="w-14 h-14 rounded-lg bg-red-100 flex items-center justify-center shrink-0 text-2xl group-hover:bg-red-200 transition-colors">▶️</div>
+              <div>
+                <p className="font-semibold text-forest-800 text-sm mb-1">How to make a clinometer</p>
+                <p className="text-gray-400 text-xs">YouTube · English</p>
+              </div>
+            </a>
+
+            {/* Placeholder cards */}
+            {[1, 2, 3].map(i => (
               <div key={i} className="bg-white rounded-xl border border-dashed border-gray-300 p-6 flex items-center gap-4 opacity-60">
                 <div className="w-14 h-14 rounded-lg bg-red-100 flex items-center justify-center shrink-0 text-2xl">▶️</div>
                 <div>

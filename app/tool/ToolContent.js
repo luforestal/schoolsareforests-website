@@ -66,6 +66,60 @@ export default function ToolContent() {
         </div>
       </section>
 
+      {/* ── What students learn ── */}
+      <section className="py-20 px-4 bg-forest-50">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-forest-700 text-center mb-3">What students actually learn</h2>
+          <p className="text-center text-gray-500 mb-14 max-w-2xl mx-auto">
+            A tree inventory is more than ecology — it's a hands-on lesson in several disciplines at once.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">📐</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Trigonometry</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Students use a homemade clinometer to sight the treetop and apply the 45° rule — putting tan, angles, and right triangles to work in the real world.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">🔢</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Math</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Measuring trunk circumference and converting it to diameter (<span className="font-mono text-xs bg-gray-100 px-1 rounded">D = C ÷ π</span>) gives students a concrete reason to care about pi and unit conversions.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">🌿</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Species identification</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Students observe leaves, bark, shape, and fruit to identify the trees around them — building nature literacy on their own campus.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">🤝</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Teamwork</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Each group divides roles — measurer, recorder, photographer, navigator — and has to coordinate to cover their zone efficiently.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">🔬</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Scientific method</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Students collect standardized field data, learn why consistency matters, and see how individual measurements combine into a dataset.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-forest-100">
+              <div className="text-3xl mb-3">🌍</div>
+              <h3 className="font-semibold text-forest-800 mb-2">Environmental awareness</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Mapping the school's trees makes students think about urban green space, biodiversity, and their own campus as a living ecosystem.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Teacher Guide ── */}
       <section className="py-20 px-4 bg-forest-50">
         <div className="max-w-3xl mx-auto">
