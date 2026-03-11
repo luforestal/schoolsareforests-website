@@ -40,16 +40,6 @@ export default function NewTreePage() {
   const [crownNS, setCrownNS] = useState('')
   const [crownEW, setCrownEW] = useState('')
 
-  // Computed tree height from clinometer readings (in meters)
-  const computedHeightM = (() => {
-    const D = toMetricLen(parseFloat(clinoDistance))
-    const h = toMetricLen(parseFloat(measurerHeight))
-    const readAngle = parseFloat(clinoAngle)
-    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
-    const elevRad = (90 - readAngle) * Math.PI / 180
-    return D * Math.tan(elevRad) + h
-  })()
-
   // Stems (diameter always stored in cm internally)
   const [isMultistem, setIsMultistem] = useState(false)
   const [stems, setStems] = useState([{ diameter: '', measureHeight: '1.3' }])
@@ -80,6 +70,16 @@ export default function NewTreePage() {
   // Unit conversion helpers — DB always stores metric
   const toMetricLen = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 0.3048   // ft → m
   const toMetricDiam = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 2.54    // in → cm
+
+  // Computed tree height from clinometer readings (in meters)
+  const computedHeightM = (() => {
+    const D = toMetricLen(parseFloat(clinoDistance))
+    const h = toMetricLen(parseFloat(measurerHeight))
+    const readAngle = parseFloat(clinoAngle)
+    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
+    const elevRad = (90 - readAngle) * Math.PI / 180
+    return D * Math.tan(elevRad) + h
+  })()
   const lenUnit = useMetric ? 'm' : 'ft'
   const diamUnit = useMetric ? 'cm' : 'in'
   const lenStep = useMetric ? '0.1' : '0.5'
