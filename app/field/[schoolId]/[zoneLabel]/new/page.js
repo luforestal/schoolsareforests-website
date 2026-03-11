@@ -72,13 +72,13 @@ export default function NewTreePage() {
   const toMetricDiam = (val) => useMetric ? parseFloat(val) : parseFloat(val) * 2.54    // in → cm
 
   // Computed tree height from clinometer readings (in meters)
+  // Formula: H = D × tan(elevation_angle) + eye_height
   const computedHeightM = (() => {
     const D = toMetricLen(parseFloat(clinoDistance))
     const h = toMetricLen(parseFloat(measurerHeight))
-    const readAngle = parseFloat(clinoAngle)
-    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
-    const elevRad = (90 - readAngle) * Math.PI / 180
-    return D * Math.tan(elevRad) + h
+    const elevAngle = parseFloat(clinoAngle)
+    if (isNaN(D) || isNaN(h) || isNaN(elevAngle) || elevAngle <= 0 || elevAngle >= 90) return null
+    return D * Math.tan(elevAngle * Math.PI / 180) + h
   })()
   const lenUnit = useMetric ? 'm' : 'ft'
   const diamUnit = useMetric ? 'cm' : 'in'
@@ -511,7 +511,7 @@ export default function NewTreePage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Clinometer angle (°) — number the string points to</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Angle of elevation (°) — from your eye to the treetop</label>
                     <div className="flex items-center gap-2">
                       <input type="number" step="1" min="1" max="89" value={clinoAngle} onChange={e => setClinoAngle(e.target.value)}
                         placeholder="e.g. 55"
@@ -523,7 +523,9 @@ export default function NewTreePage() {
                 {computedHeightM !== null && (
                   <div className="mt-3 bg-forest-50 border border-forest-200 rounded-lg px-4 py-2.5 flex items-center gap-2">
                     <span className="text-forest-600 text-sm">Calculated height:</span>
-                    <span className="font-bold text-forest-800 text-sm">{computedHeightM.toFixed(1)} m</span>
+                    <span className="font-bold text-forest-800 text-sm">
+                      {useMetric ? `${computedHeightM.toFixed(1)} m` : `${(computedHeightM * 3.28084).toFixed(1)} ft`}
+                    </span>
                     <span className="text-gray-400 text-xs">(auto-saved)</span>
                   </div>
                 )}

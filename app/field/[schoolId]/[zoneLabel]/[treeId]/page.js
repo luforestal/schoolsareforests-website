@@ -37,10 +37,9 @@ export default function TreeDetailPage() {
   const editComputedHeightM = (() => {
     const D = parseFloat(editClinoDistance)
     const h = parseFloat(editMeasurerHeight)
-    const readAngle = parseFloat(editClinoAngle)
-    if (isNaN(D) || isNaN(h) || isNaN(readAngle) || readAngle <= 0 || readAngle >= 90) return null
-    const elevRad = (90 - readAngle) * Math.PI / 180
-    return D * Math.tan(elevRad) + h
+    const elevAngle = parseFloat(editClinoAngle)
+    if (isNaN(D) || isNaN(h) || isNaN(elevAngle) || elevAngle <= 0 || elevAngle >= 90) return null
+    return D * Math.tan(elevAngle * Math.PI / 180) + h
   })()
 
   useEffect(() => {

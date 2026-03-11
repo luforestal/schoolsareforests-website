@@ -294,8 +294,7 @@ export default function ToolContent() {
                       {[
                         'Stand back from the tree. Measure your distance to the trunk (D) and your eye height (h).',
                         'Look through the straw at the very top of the tree.',
-                        'Have a partner read the number where the string crosses the protractor.',
-                        'Subtract that number from 90° to get the angle of elevation (α).',
+                        'Have a partner read the number where the string crosses the protractor — that is your angle of elevation (α).',
                       ].map((step, i) => (
                         <li key={i} className="flex gap-3">
                           <span className="w-5 h-5 rounded-full bg-forest-100 text-forest-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
@@ -306,7 +305,7 @@ export default function ToolContent() {
                     <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                       <div className="text-xs font-bold text-amber-800 mb-1">Formula</div>
                       <div className="font-mono text-sm font-bold text-amber-900 text-center py-1">Height = D × tan(α) + eye height</div>
-                      <div className="text-xs text-amber-700 mt-1">e.g. string reads 55° → α = 35°, D = 10 m, eye = 1.5 m → tree ≈ 8.5 m</div>
+                      <div className="text-xs text-amber-700 mt-1">e.g. string reads 35°, D = 8 m, eye = 1.2 m → tree ≈ 6.8 m</div>
                     </div>
                   </div>
                 </div>
