@@ -213,7 +213,7 @@ export default function ToolContent() {
               <div className="text-4xl shrink-0">📐</div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-forest-800 mb-1">Cardboard clinometer</h3>
+                  <h3 className="font-semibold text-forest-800 mb-1">Protractor clinometer</h3>
                   <span className="text-forest-500 text-sm font-medium group-hover:text-forest-700 transition-colors">
                     {clinometerOpen ? '▲ Close' : '▼ How to build it'}
                   </span>

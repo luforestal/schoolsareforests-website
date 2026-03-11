@@ -79,7 +79,7 @@ export default function FieldSheetPage() {
         <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-3 mb-6 flex items-start gap-3">
           <span className="text-green-700 text-xl mt-0.5">📋</span>
           <p className="text-xs text-green-800 leading-relaxed">
-            Fill in one row per tree. Use the <strong>cardboard clinometer</strong> (back of this sheet) to measure height.
+            Fill in one row per tree. Use the <strong>protractor clinometer</strong> (back of this sheet) to measure height.
             Measure trunk at <strong>1.3 m from the ground</strong> (diameter tape reads diameter directly; regular tape: divide cm by π = 3.14).
             For crown, measure the <strong>widest point end-to-end</strong>.
             Health: <strong>H</strong> = healthy, <strong>S</strong> = stressed, <strong>D</strong> = dead/dying.
@@ -182,7 +182,7 @@ export default function FieldSheetPage() {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-gray-700 font-bold text-lg">Cardboard Clinometer</div>
+            <div className="text-gray-700 font-bold text-lg">Protractor Clinometer</div>
             <div className="text-gray-400 text-xs uppercase tracking-wide">Build & Use Guide</div>
           </div>
         </div>
@@ -198,11 +198,11 @@ export default function FieldSheetPage() {
             <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-5">
               <div className="text-xs font-bold text-green-800 mb-2 uppercase tracking-wide">You need</div>
               <ul className="text-xs text-green-900 space-y-1">
-                <li>✂️ A piece of cardboard (~25 × 25 cm)</li>
-                <li>📏 Ruler and pencil</li>
-                <li>🪡 String (~35 cm long)</li>
-                <li>🪙 A coin or small washer (weight)</li>
-                <li>📌 A pin or hole punch</li>
+                <li>📐 Protractor (clear plastic preferred)</li>
+                <li>🥤 Drinking straw</li>
+                <li>🪡 String (~25–30 cm long)</li>
+                <li>🪙 Small weight — nut, washer, or paperclip</li>
+                <li>🩹 Tape (masking or clear)</li>
               </ul>
             </div>
 
@@ -210,31 +210,31 @@ export default function FieldSheetPage() {
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
                 <div>
-                  <strong>Draw a right triangle.</strong> On the cardboard, mark two sides of exactly <strong>20 cm each</strong> at a right angle. Connect them with the hypotenuse. Cut it out.
+                  <strong>Tape the straw</strong> along the flat straight edge of the protractor (the 0°–180° line). This is your sight.
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
                 <div>
-                  <strong>Mark the right-angle corner.</strong> Draw a small square at that corner so you always know which one it is.
+                  <strong>Thread the string</strong> through the small hole at the center of the protractor's straight edge.
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
                 <div>
-                  <strong>Make a hole</strong> at the right-angle corner with a pin or hole punch. Thread the string through and tie a knot so it can't pull through.
+                  <strong>Tie a knot</strong> on the back so the string won't pull through.
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">4</span>
                 <div>
-                  <strong>Tie the weight</strong> (coin or washer) to the free end of the string. The string will hang straight down by gravity when you hold the clinometer up.
+                  <strong>Tie the weight</strong> to the free end. It must hang freely.
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">5</span>
                 <div>
-                  <strong>Label it.</strong> Write "Look this way →" along the hypotenuse, pointing from the right-angle end toward the opposite corner.
+                  <strong>Test:</strong> hold it horizontal — the string should hang straight down and read 90°.
                 </div>
               </li>
             </ol>
@@ -295,25 +295,25 @@ export default function FieldSheetPage() {
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
-                <div><strong>Hold the clinometer</strong> at eye level, with the right-angle corner pointing toward you. Let the string hang freely.</div>
+                <div><strong>Look through the straw</strong> at the very top of the tree. Let the string hang freely.</div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
-                <div><strong>Tilt the triangle</strong> until you can see the top of the tree along the hypotenuse. When aligned, pinch the string against the cardboard.</div>
+                <div><strong>Have a partner read</strong> the number where the string crosses the protractor — that is your angle of elevation (α). Write it down.</div>
               </li>
               <li className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">4</span>
-                <div>If the string touches the <strong>midpoint of the vertical side</strong> you're at 45°. Tree height = <strong>D + eye height</strong>.</div>
+                <div>Enter D, your eye height, and α into the app — it calculates the tree height automatically.</div>
               </li>
             </ol>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <div className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1.5">Quick formula (45° triangle)</div>
+              <div className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1.5">Formula</div>
               <div className="text-center font-mono text-sm font-bold text-amber-900 my-2 py-2 bg-amber-100 rounded-lg">
-                Height = Distance + Eye height
+                Height = D × tan(α) + eye height
               </div>
               <div className="text-xs text-amber-800">
-                Example: you stand <strong>8 m</strong> from the tree, eye height <strong>1.5 m</strong> → tree is <strong>9.5 m</strong> tall.
+                Example: α = <strong>35°</strong>, D = <strong>8 m</strong>, eye height = <strong>1.2 m</strong> → tree ≈ <strong>6.8 m</strong>
               </div>
             </div>
           </div>
