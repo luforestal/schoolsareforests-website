@@ -227,28 +227,28 @@ export default function ToolContent() {
             {clinometerOpen && (
               <div className="bg-white border border-forest-200 rounded-2xl overflow-hidden -mt-2">
                 <div className="bg-forest-700 text-white px-6 py-4">
-                  <h4 className="font-bold text-base">Build a cardboard clinometer</h4>
-                  <p className="text-forest-200 text-xs mt-0.5">A free, 5-minute DIY height meter</p>
+                  <h4 className="font-bold text-base">Build a protractor clinometer</h4>
+                  <p className="text-forest-200 text-xs mt-0.5">A free, 5-minute DIY angle meter</p>
                 </div>
                 <div className="p-6 grid sm:grid-cols-2 gap-8">
                   {/* Left — build steps */}
                   <div>
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">You need</div>
                     <ul className="text-sm text-gray-700 space-y-1 mb-5">
-                      <li>✂️ Piece of cardboard (~25 × 25 cm)</li>
-                      <li>📏 Ruler and pencil</li>
-                      <li>🪡 String (~35 cm)</li>
-                      <li>🪙 A coin or small washer</li>
-                      <li>📌 Pin or hole punch</li>
+                      <li>📐 Protractor (clear plastic preferred)</li>
+                      <li>🥤 Drinking straw</li>
+                      <li>🪡 String (~25–30 cm)</li>
+                      <li>🪙 Small weight — nut, washer, or paperclip</li>
+                      <li>🩹 Tape (masking or clear)</li>
                     </ul>
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Build it</div>
                     <ol className="text-sm text-gray-700 space-y-3">
                       {[
-                        'Draw two sides of exactly 20 cm at a right angle on the cardboard. Connect them with the hypotenuse. Cut it out.',
-                        'Mark the right-angle corner with a small square so you always know which corner it is.',
-                        'Make a small hole at the right-angle corner. Thread the string through and tie a knot on the back so it won\'t pull through.',
-                        'Tie the coin or washer to the free end of the string. It will hang straight down by gravity.',
-                        'Label the hypotenuse: "Look this way →" pointing from the right-angle end toward the opposite corner.',
+                        'Tape the straw securely along the flat, straight edge of the protractor (the 0°–180° line). This is your sight.',
+                        'Thread the string through the small hole at the center of the protractor\'s straight edge.',
+                        'Tie a knot on the back so the string won\'t pull through.',
+                        'Tie the weight to the free end of the string. It must hang freely.',
+                        'Test: hold it horizontal — the string should hang straight down and read 90°.',
                       ].map((step, i) => (
                         <li key={i} className="flex gap-3">
                           <span className="w-5 h-5 rounded-full bg-forest-100 text-forest-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
@@ -260,35 +260,42 @@ export default function ToolContent() {
 
                   {/* Right — diagram + use it */}
                   <div>
-                    {/* Diagram */}
-                    <svg viewBox="0 0 260 230" className="w-full max-w-[220px] mx-auto block mb-5" style={{ fontFamily: 'Arial, sans-serif' }}>
-                      <polygon points="30,190 30,30 190,190" fill="#f0fdf4" stroke="#15803d" strokeWidth="2.5" strokeLinejoin="round" />
-                      <polyline points="30,170 50,170 50,190" fill="none" stroke="#15803d" strokeWidth="1.5" />
-                      <defs>
-                        <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                          <path d="M0,0 L0,6 L8,3 z" fill="#15803d" />
-                        </marker>
-                      </defs>
-                      <line x1="60" y1="170" x2="155" y2="75" stroke="#15803d" strokeWidth="2" strokeDasharray="6,3" markerEnd="url(#arr2)" />
-                      <text x="95" y="122" fontSize="9" fill="#15803d" fontWeight="bold" transform="rotate(-44,95,122)">Sight line</text>
-                      <line x1="30" y1="190" x2="30" y2="225" stroke="#374151" strokeWidth="2" strokeDasharray="4,2" />
-                      <circle cx="30" cy="229" r="7" fill="#374151" />
-                      <text x="42" y="233" fontSize="9" fill="#374151">weight</text>
-                      <ellipse cx="195" cy="195" rx="9" ry="5" fill="none" stroke="#1e40af" strokeWidth="1.5" />
-                      <circle cx="195" cy="195" r="2.5" fill="#1e40af" />
-                      <text x="207" y="200" fontSize="9" fill="#1e40af">Eye</text>
-                      <text x="10" y="24" fontSize="10" fill="#15803d">🌲 Tree top</text>
-                      <text x="2" y="185" fontSize="9" fill="#374151">Right</text>
-                      <text x="2" y="195" fontSize="9" fill="#374151">angle</text>
+                    {/* Diagram: protractor with straw and plumb line */}
+                    <svg viewBox="0 0 240 200" className="w-full max-w-[220px] mx-auto block mb-5" style={{ fontFamily: 'Arial, sans-serif' }}>
+                      {/* Protractor body (semicircle) */}
+                      <path d="M 30,130 A 90,90 0 0,1 210,130 Z" fill="#e0f2fe" stroke="#0369a1" strokeWidth="2" />
+                      {/* Flat edge (straw) */}
+                      <rect x="26" y="126" width="188" height="8" rx="4" fill="#0369a1" />
+                      <text x="120" y="122" fontSize="8" fill="#0369a1" textAnchor="middle" fontWeight="bold">← straw (sight here) →</text>
+                      {/* Angle tick marks */}
+                      <line x1="120" y1="130" x2="120" y2="44" stroke="#64748b" strokeWidth="1" strokeDasharray="3,2" />
+                      <text x="123" y="50" fontSize="7" fill="#64748b">90°</text>
+                      <line x1="120" y1="130" x2="165" y2="52" stroke="#64748b" strokeWidth="0.8" strokeDasharray="2,2" />
+                      <text x="168" y="55" fontSize="7" fill="#64748b">60°</text>
+                      <line x1="120" y1="130" x2="198" y2="85" stroke="#64748b" strokeWidth="0.8" strokeDasharray="2,2" />
+                      <text x="200" y="88" fontSize="7" fill="#64748b">30°</text>
+                      {/* Center dot */}
+                      <circle cx="120" cy="130" r="3" fill="#0369a1" />
+                      {/* Plumb line hanging at ~55° reading (meaning 35° elevation) */}
+                      <line x1="120" y1="130" x2="148" y2="185" stroke="#dc2626" strokeWidth="2" />
+                      <circle cx="148" cy="188" r="6" fill="#dc2626" />
+                      <text x="156" y="192" fontSize="8" fill="#dc2626" fontWeight="bold">weight</text>
+                      {/* Angle label */}
+                      <path d="M 120,105 A 25,25 0 0,1 138,112" fill="none" stroke="#dc2626" strokeWidth="1.5" />
+                      <text x="132" y="102" fontSize="8" fill="#dc2626" fontWeight="bold">read here</text>
+                      {/* Eye */}
+                      <ellipse cx="26" cy="130" rx="8" ry="5" fill="none" stroke="#1e40af" strokeWidth="1.5" />
+                      <circle cx="26" cy="130" r="2.5" fill="#1e40af" />
+                      <text x="4" y="148" fontSize="8" fill="#1e40af">Eye</text>
                     </svg>
 
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Use it</div>
                     <ol className="text-sm text-gray-700 space-y-2">
                       {[
-                        'Stand back until you can see the top. Measure your distance from the trunk (D).',
-                        'Hold the clinometer at eye level, right-angle corner toward you. Let the string hang.',
-                        'Tilt until the tree top lines up with the hypotenuse. Pinch the string.',
-                        'If the string hits the midpoint of the vertical side → you\'re at 45°.',
+                        'Stand back from the tree. Measure your distance to the trunk (D) and your eye height (h).',
+                        'Look through the straw at the very top of the tree.',
+                        'Have a partner read the number where the string crosses the protractor.',
+                        'Subtract that number from 90° to get the angle of elevation (α).',
                       ].map((step, i) => (
                         <li key={i} className="flex gap-3">
                           <span className="w-5 h-5 rounded-full bg-forest-100 text-forest-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
@@ -297,9 +304,9 @@ export default function ToolContent() {
                       ))}
                     </ol>
                     <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                      <div className="text-xs font-bold text-amber-800 mb-1">Formula at 45°</div>
-                      <div className="font-mono text-sm font-bold text-amber-900 text-center py-1">Height = Distance + Eye height</div>
-                      <div className="text-xs text-amber-700 mt-1">e.g. 8 m away, eye at 1.5 m → tree is 9.5 m tall</div>
+                      <div className="text-xs font-bold text-amber-800 mb-1">Formula</div>
+                      <div className="font-mono text-sm font-bold text-amber-900 text-center py-1">Height = D × tan(α) + eye height</div>
+                      <div className="text-xs text-amber-700 mt-1">e.g. string reads 55° → α = 35°, D = 10 m, eye = 1.5 m → tree ≈ 8.5 m</div>
                     </div>
                   </div>
                 </div>
@@ -335,7 +342,7 @@ export default function ToolContent() {
           <div className="text-4xl mb-4">🖨️</div>
           <h2 className="text-2xl font-bold text-forest-700 mb-3">No internet? No problem.</h2>
           <p className="text-gray-600 max-w-xl mx-auto mb-8 leading-relaxed">
-            Download and print the field data sheet before heading outside. Students fill it in by hand, and you enter the data later when back online. The sheet includes all measurement fields plus instructions for building the cardboard triangle clinometer.
+            Download and print the field data sheet before heading outside. Students fill it in by hand, and you enter the data later when back online. The sheet includes all measurement fields plus instructions for building the protractor clinometer.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
             <Link
