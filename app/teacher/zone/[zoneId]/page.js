@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 const HEALTH_COLORS = {
   good: 'bg-green-100 text-green-700',
@@ -13,6 +14,7 @@ const HEALTH_COLORS = {
 export default function TeacherZonePage() {
   const { zoneId } = useParams()
   const router = useRouter()
+  const t = useT()
   const [zone, setZone] = useState(null)
   const [school, setSchool] = useState(null)
   const [trees, setTrees] = useState([])
@@ -98,7 +100,7 @@ export default function TeacherZonePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
-      <p className="text-forest-400">Loading…</p>
+      <p className="text-forest-400">{t('common.loading')}</p>
     </div>
   )
 
@@ -108,9 +110,9 @@ export default function TeacherZonePage() {
       <div className="bg-forest-800 text-white px-6 py-5">
         <div className="max-w-4xl mx-auto">
           <button onClick={() => router.push('/teacher/dashboard')} className="text-forest-300 text-sm mb-2 hover:text-white transition-colors">
-            ← Dashboard
+            {t('zone.back')}
           </button>
-          <h1 className="text-xl font-bold">Zone {zone.label} {zone.category ? `— ${zone.category}` : ''}</h1>
+          <h1 className="text-xl font-bold">{t('zone.title', { label: zone.label })} {zone.category ? `— ${zone.category}` : ''}</h1>
           {zone.description && <p className="text-forest-300 text-sm">{zone.description}</p>}
           {school && <p className="text-forest-400 text-xs mt-0.5">{school.name}</p>}
         </div>
@@ -122,23 +124,23 @@ export default function TeacherZonePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-forest-700">{trees.length}</div>
-            <div className="text-gray-400 text-xs mt-1">Total trees</div>
+            <div className="text-gray-400 text-xs mt-1">{t('zone.total_trees')}</div>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-forest-700">{accessibleTrees.length}</div>
-            <div className="text-gray-400 text-xs mt-1">Accessible</div>
+            <div className="text-gray-400 text-xs mt-1">{t('zone.accessible')}</div>
           </div>
           <div className={`rounded-xl p-4 text-center shadow-sm ${validationComplete ? 'bg-green-50' : 'bg-red-50'}`}>
             <div className={`text-2xl font-bold ${validationComplete ? 'text-green-700' : 'text-red-600'}`}>
               {doneValidations}/{requiredValidations}
             </div>
-            <div className={`text-xs mt-1 ${validationComplete ? 'text-green-600' : 'text-red-500'}`}>Validations</div>
+            <div className={`text-xs mt-1 ${validationComplete ? 'text-green-600' : 'text-red-500'}`}>{t('zone.validations')}</div>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-forest-700">
               {avgAccuracy !== null ? `${avgAccuracy}%` : '—'}
             </div>
-            <div className="text-gray-400 text-xs mt-1">Avg accuracy</div>
+            <div className="text-gray-400 text-xs mt-1">{t('zone.avg_accuracy')}</div>
           </div>
         </div>
 
@@ -148,12 +150,12 @@ export default function TeacherZonePage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className={`font-semibold ${validationComplete ? 'text-green-800' : 'text-forest-800'}`}>
-                  {validationComplete ? '✓ Validation complete for this zone' : 'Validation required'}
+                  {validationComplete ? t('zone.complete_msg') : t('zone.required_msg')}
                 </p>
                 <p className={`text-sm mt-0.5 ${validationComplete ? 'text-green-600' : 'text-gray-500'}`}>
                   {validationComplete
-                    ? `${doneValidations} tree${doneValidations !== 1 ? 's' : ''} validated — data quality confirmed`
-                    : `${requiredValidations - doneValidations} more validation${requiredValidations - doneValidations !== 1 ? 's' : ''} needed (1 per 10 trees)`}
+                    ? t(doneValidations !== 1 ? 'zone.done_msg_plural' : 'zone.done_msg', { n: doneValidations })
+                    : t((requiredValidations - doneValidations) !== 1 ? 'zone.needed_msg_plural' : 'zone.needed_msg', { n: requiredValidations - doneValidations })}
                 </p>
               </div>
               {!validationComplete && (
@@ -162,7 +164,7 @@ export default function TeacherZonePage() {
                   disabled={pickingRandom}
                   className="flex-shrink-0 bg-forest-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50"
                 >
-                  {pickingRandom ? 'Selecting…' : 'Validate random tree →'}
+                  {pickingRandom ? t('zone.selecting') : t('zone.validate_random')}
                 </button>
               )}
               {validationComplete && doneValidations < accessibleTrees.length && (
@@ -171,7 +173,7 @@ export default function TeacherZonePage() {
                   disabled={pickingRandom}
                   className="flex-shrink-0 border border-green-300 text-green-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-50"
                 >
-                  {pickingRandom ? 'Selecting…' : 'Validate another'}
+                  {pickingRandom ? t('zone.selecting') : t('zone.validate_another')}
                 </button>
               )}
             </div>
@@ -179,12 +181,12 @@ export default function TeacherZonePage() {
         )}
 
         {/* Tree list */}
-        <h2 className="text-lg font-bold text-forest-800 mb-4">Trees in Zone {zone.label}</h2>
+        <h2 className="text-lg font-bold text-forest-800 mb-4">{t('zone.trees_title', { label: zone.label })}</h2>
 
         {trees.length === 0 ? (
           <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm">
             <div className="text-3xl mb-2">🌱</div>
-            <p>No trees recorded in this zone yet</p>
+            <p>{t('zone.no_trees')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -206,7 +208,7 @@ export default function TeacherZonePage() {
                         <>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-forest-800 text-sm">
-                              {tree.species_common || (tree.needs_identification ? 'ID needed' : 'Unknown')}
+                              {tree.species_common || (tree.needs_identification ? t('field.needs_id') : 'Unknown')}
                             </p>
                             {tree.species_scientific && (
                               <p className="text-xs italic text-gray-400">{tree.species_scientific}</p>
@@ -229,7 +231,7 @@ export default function TeacherZonePage() {
                           </div>
                           {isValidated && validation && (
                             <p className="text-xs text-green-600 mt-1 font-semibold">
-                              ✓ Validated — {Math.round(validation.accuracy_pct || 0)}% accuracy
+                              {t('zone.validated_tree', { pct: Math.round(validation.accuracy_pct || 0) })}
                             </p>
                           )}
                         </>
@@ -242,7 +244,7 @@ export default function TeacherZonePage() {
                         onClick={() => router.push(`/field/${zone.school_id}/${zone.label}/${tree.id}`)}
                         className="text-xs font-semibold text-forest-600 bg-forest-50 px-3 py-1.5 rounded-lg hover:bg-forest-100 transition-colors"
                       >
-                        Edit
+                        {t('zone.edit')}
                       </button>
                     </div>
                   </div>

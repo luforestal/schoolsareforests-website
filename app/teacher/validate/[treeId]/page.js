@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 function calcAccuracy(studentVal, teacherVal) {
   if (studentVal == null || teacherVal == null || teacherVal === 0) return null
@@ -14,6 +15,7 @@ export default function TeacherValidatePage() {
   const searchParams = useSearchParams()
   const zoneId = searchParams.get('zoneId')
   const router = useRouter()
+  const t = useT()
 
   const [tree, setTree] = useState(null)
   const [zone, setZone] = useState(null)
@@ -68,7 +70,7 @@ export default function TeacherValidatePage() {
 
   const handleSave = async () => {
     if (!height && !crownNS && !crownEW && !healthStatus) {
-      alert('Please enter at least one measurement.')
+      alert(t('validate.err_empty'))
       return
     }
     setSaving(true)
@@ -111,7 +113,7 @@ export default function TeacherValidatePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
-      <p className="text-forest-400">Loading…</p>
+      <p className="text-forest-400">{t('common.loading')}</p>
     </div>
   )
 
@@ -123,7 +125,7 @@ export default function TeacherValidatePage() {
       <div className="min-h-screen bg-forest-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
           <div className="text-5xl mb-4">{pct === null ? '📋' : pct >= 90 ? '🎯' : pct >= 70 ? '📊' : '⚠️'}</div>
-          <h2 className="text-2xl font-bold text-forest-800 mb-1">Validation saved</h2>
+          <h2 className="text-2xl font-bold text-forest-800 mb-1">{t('validate.saved_title')}</h2>
           {pct !== null && (
             <p className={`text-4xl font-bold mt-2 ${color}`}>{Math.round(pct)}% accuracy</p>
           )}
@@ -139,9 +141,9 @@ export default function TeacherValidatePage() {
                     </span>
                   </div>
                   <div className="flex gap-4 text-xs text-gray-500">
-                    <span>Student: <strong>{c.student}m</strong></span>
-                    <span>Teacher: <strong>{c.teacher}m</strong></span>
-                    <span>Diff: <strong>{Math.abs(c.student - c.teacher).toFixed(1)}m</strong></span>
+                    <span>{t('validate.student')}: <strong>{c.student}m</strong></span>
+                    <span>{t('validate.teacher')}: <strong>{c.teacher}m</strong></span>
+                    <span>{t('validate.diff')}: <strong>{Math.abs(c.student - c.teacher).toFixed(1)}m</strong></span>
                   </div>
                   {/* Accuracy bar */}
                   <div className="mt-2 bg-gray-200 rounded-full h-1.5">
@@ -159,7 +161,7 @@ export default function TeacherValidatePage() {
             onClick={() => router.push(zoneId ? `/teacher/zone/${zoneId}` : '/teacher/dashboard')}
             className="mt-6 w-full bg-forest-700 text-white font-semibold py-3 rounded-xl hover:bg-forest-600 transition-colors"
           >
-            Back to zone →
+            {t('validate.back_zone')}
           </button>
         </div>
       </div>
@@ -174,11 +176,11 @@ export default function TeacherValidatePage() {
             onClick={() => router.push(zoneId ? `/teacher/zone/${zoneId}` : '/teacher/dashboard')}
             className="text-forest-300 text-sm mb-2 hover:text-white transition-colors"
           >
-            ← Zone {zone?.label}
+            {t('validate.back', { label: zone?.label })}
           </button>
-          <h1 className="text-xl font-bold">Validate Tree</h1>
+          <h1 className="text-xl font-bold">{t('validate.title')}</h1>
           <p className="text-forest-300 text-sm">
-            {tree.species_common || 'Unknown species'} — randomly selected for validation
+            {t('validate.subtitle', { species: tree.species_common || 'Unknown species' })}
           </p>
         </div>
       </div>
@@ -187,15 +189,15 @@ export default function TeacherValidatePage() {
 
         {/* Student measurements (read-only reference) */}
         <div className="bg-forest-50 border border-forest-100 rounded-xl p-5 mb-6">
-          <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide mb-3">Student measurements (reference)</p>
+          <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide mb-3">{t('validate.ref_title')}</p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { label: 'Height', value: tree.height_m ? `${tree.height_m} m` : '—' },
-              { label: 'Crown N–S', value: tree.crown_ns_m ? `${tree.crown_ns_m} m` : '—' },
-              { label: 'Crown W–E', value: tree.crown_ew_m ? `${tree.crown_ew_m} m` : '—' },
-              { label: 'Health', value: tree.health_status || '—' },
-              { label: 'Species', value: tree.species_common || '—' },
-              { label: 'Recorded by', value: tree.recorded_by || '—' },
+              { label: t('validate.label_height'), value: tree.height_m ? `${tree.height_m} m` : '—' },
+              { label: t('validate.label_crown_ns'), value: tree.crown_ns_m ? `${tree.crown_ns_m} m` : '—' },
+              { label: t('validate.label_crown_ew'), value: tree.crown_ew_m ? `${tree.crown_ew_m} m` : '—' },
+              { label: t('validate.label_health'), value: tree.health_status || '—' },
+              { label: t('validate.label_species'), value: tree.species_common || '—' },
+              { label: t('validate.label_recorded'), value: tree.recorded_by || '—' },
             ].map(({ label, value }) => (
               <div key={label} className="bg-white rounded-lg px-3 py-2.5">
                 <p className="text-xs text-gray-400">{label}</p>
@@ -203,15 +205,15 @@ export default function TeacherValidatePage() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-3">Do NOT look at these while measuring — measure independently, then compare.</p>
+          <p className="text-xs text-gray-400 mt-3">{t('validate.ref_warning')}</p>
         </div>
 
         {/* Teacher's measurements */}
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-4 mb-6">
-          <p className="font-semibold text-forest-800">Your measurements</p>
+          <p className="font-semibold text-forest-800">{t('validate.your_measurements')}</p>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Height (m)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('validate.height_m')}</label>
             <div className="flex items-center gap-2">
               <input type="number" step="0.1" min="0" value={height} onChange={e => setHeight(e.target.value)}
                 placeholder="e.g. 8.5"
@@ -222,13 +224,13 @@ export default function TeacherValidatePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Crown N–S (m)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('validate.crown_ns')}</label>
               <input type="number" step="0.1" min="0" value={crownNS} onChange={e => setCrownNS(e.target.value)}
                 placeholder="e.g. 5.0"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Crown W–E (m)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('validate.crown_ew')}</label>
               <input type="number" step="0.1" min="0" value={crownEW} onChange={e => setCrownEW(e.target.value)}
                 placeholder="e.g. 4.5"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
@@ -236,12 +238,12 @@ export default function TeacherValidatePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Health status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('validate.health')}</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: 'good', label: 'Good', emoji: '🟢' },
-                { value: 'fair', label: 'Fair', emoji: '🟡' },
-                { value: 'poor', label: 'Poor', emoji: '🔴' },
+                { value: 'good', label: t('newTree.health_good'), emoji: '🟢' },
+                { value: 'fair', label: t('newTree.health_fair'), emoji: '🟡' },
+                { value: 'poor', label: t('newTree.health_poor'), emoji: '🔴' },
               ].map(opt => (
                 <button key={opt.value} type="button" onClick={() => setHealthStatus(opt.value)}
                   className={`py-2.5 rounded-xl border-2 font-semibold text-sm transition-colors flex flex-col items-center gap-1 ${
@@ -255,9 +257,9 @@ export default function TeacherValidatePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('validate.notes')} <span className="text-gray-400 font-normal">({t('common.optional')})</span></label>
             <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="Any observations…"
+              placeholder={t('validate.notes_placeholder')}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
           </div>
         </div>
@@ -267,7 +269,7 @@ export default function TeacherValidatePage() {
           disabled={saving}
           className="w-full bg-forest-700 text-white font-bold py-4 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 text-lg"
         >
-          {saving ? 'Saving…' : 'Save & See Accuracy →'}
+          {saving ? t('validate.saving') : t('validate.save')}
         </button>
         <div className="pb-8" />
       </div>

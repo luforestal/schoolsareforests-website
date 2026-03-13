@@ -3,9 +3,11 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 export default function StudentPage() {
   const router = useRouter()
+  const t = useT()
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,17 +30,17 @@ export default function StudentPage() {
     setLoading(false)
 
     if (!session) {
-      setError('Code not found. Double-check what your teacher gave you.')
+      setError(t('student.err_not_found'))
       return
     }
 
     if (!session.is_active) {
-      setError('This session has been closed by your teacher. Ask them to reopen it.')
+      setError(t('student.err_closed'))
       return
     }
 
     if (new Date(session.expires_at) < new Date()) {
-      setError('This session has expired. Ask your teacher to reactivate it.')
+      setError(t('student.err_expired'))
       return
     }
 
@@ -59,12 +61,12 @@ export default function StudentPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">🌳</div>
-          <h1 className="text-2xl font-bold text-forest-800">Enter your session code</h1>
-          <p className="text-gray-500 text-sm mt-2">Your teacher will give you this 6-letter code at the start of class.</p>
+          <h1 className="text-2xl font-bold text-forest-800">{t('student.title')}</h1>
+          <p className="text-gray-500 text-sm mt-2">{t('student.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6">
-          <label className="block text-sm font-medium text-gray-600 mb-2">Session Code</label>
+          <label className="block text-sm font-medium text-gray-600 mb-2">{t('student.code_label')}</label>
           <input
             type="text"
             value={code}
@@ -83,13 +85,13 @@ export default function StudentPage() {
             disabled={loading || code.trim().length < 6}
             className="mt-4 w-full bg-forest-700 text-white font-semibold py-3 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-40"
           >
-            {loading ? 'Checking…' : 'Start Inventory →'}
+            {loading ? t('student.checking') : t('student.start')}
           </button>
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-5">
-          Are you a teacher?{' '}
-          <a href="/teacher" className="text-forest-600 hover:underline">Sign in here</a>
+          {t('student.teacher_prompt')}{' '}
+          <a href="/teacher" className="text-forest-600 hover:underline">{t('student.sign_in_here')}</a>
         </p>
       </div>
     </div>

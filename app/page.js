@@ -4,12 +4,8 @@ import dynamic from 'next/dynamic'
 import WorldMapWrapper from '@/components/WorldMapWrapper'
 import VolunteerCard from '@/components/VolunteerCard'
 import { schools } from '@/data/schools'
+import Image from 'next/image'
 import { useT } from '@/lib/i18n'
-
-const PilotBadge = dynamic(
-  () => import('@/components/PilotBadge').then(m => m.PilotBadge),
-  { ssr: false }
-)
 
 export default function HomePage() {
   const t = useT()
@@ -121,7 +117,7 @@ export default function HomePage() {
                   />
                   {school.pilot && (
                     <div className="absolute top-1 right-1" title="Pilot School — Founding Member & Trailblazer">
-                      <PilotBadge size={52}/>
+                      <Image src="/certificates/Founding_Member_noBG.png" alt="Pilot School" width={52} height={52} className="object-contain"/>
                     </div>
                   )}
                 </div>

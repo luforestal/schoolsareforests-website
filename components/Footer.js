@@ -1,6 +1,9 @@
+'use client'
 import Link from 'next/link'
+import { useT } from '@/lib/i18n'
 
 export default function Footer() {
+  const t = useT()
   return (
     <footer className="bg-forest-900 text-forest-200 py-12">
       <div className="max-w-6xl mx-auto px-4">
@@ -15,27 +18,26 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-sm leading-relaxed">
-              Documenting and celebrating the trees growing on school campuses worldwide,
-              one inventory at a time.
+              {t('footer.tagline')}
             </p>
           </div>
 
           {/* Quick links */}
           <div>
-            <h3 className="font-semibold text-white mb-3">Quick Links</h3>
+            <h3 className="font-semibold text-white mb-3">{t('footer.quick_links')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/"        className="hover:text-white transition-colors">Home</Link></li>
-              <li><Link href="/about"   className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/schools" className="hover:text-white transition-colors">Explore Schools</Link></li>
-              <li><Link href="/tool"    className="hover:text-white transition-colors">Our Tool</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/"        className="hover:text-white transition-colors">{t('nav.home')}</Link></li>
+              <li><Link href="/about"   className="hover:text-white transition-colors">{t('about.title')}</Link></li>
+              <li><Link href="/schools" className="hover:text-white transition-colors">{t('nav.schools')}</Link></li>
+              <li><Link href="/tool"    className="hover:text-white transition-colors">{t('nav.tool')}</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">{t('nav.contact')}</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="font-semibold text-white mb-3">Find Us</h3>
-            <p className="text-sm">Worldwide</p>
+            <h3 className="font-semibold text-white mb-3">{t('footer.find_us')}</h3>
+            <p className="text-sm">{t('footer.worldwide')}</p>
             <p className="text-sm mt-1">
               <a href="mailto:schoolsareforests@gmail.com" className="hover:text-white transition-colors">
                 schoolsareforests@gmail.com
