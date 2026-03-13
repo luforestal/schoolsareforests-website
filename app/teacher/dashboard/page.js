@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import InventoryUpload from '@/components/InventoryUpload'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
@@ -314,7 +315,13 @@ export default function TeacherDashboard() {
     setTogglingPublished(false)
   }
 
-  const [activeTab, setActiveTab] = useState('use')
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search)
+      if (p.get('tab') === 'inventory') return 'inventory'
+    }
+    return 'use'
+  })
 
   // Parse "lat, lng" string from Google Maps
   const parseCoords = (raw) => {
@@ -476,6 +483,7 @@ export default function TeacherDashboard() {
     { id: 'zones', label: 'Zones' },
     { id: 'validation', label: 'Validation' },
     { id: 'manual', label: 'Add Trees' },
+    { id: 'inventory', label: 'Upload Inventory' },
   ]
 
   return (
@@ -1207,6 +1215,17 @@ export default function TeacherDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── TAB: UPLOAD INVENTORY ── */}
+        {activeTab === 'inventory' && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <InventoryUpload
+              school={school}
+              zones={zones}
+              onImportDone={() => { loadData(); setActiveTab('zones') }}
+            />
           </div>
         )}
 

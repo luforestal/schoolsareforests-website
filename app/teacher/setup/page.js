@@ -113,6 +113,7 @@ export default function TeacherSetupPage() {
   const [studentCount, setStudentCount] = useState('')
   const [recZones, setRecZones] = useState(null)
   const [recStudents, setRecStudents] = useState(null)
+  const [hasPriorInventory, setHasPriorInventory] = useState(null) // null | true | false
 
   const dialCode = COUNTRIES.find(c => c.name === selectedCountry)?.dial || ''
   const filteredSchools = allSchools.filter(s => s.country === selectedCountry)
@@ -211,7 +212,7 @@ export default function TeacherSetupPage() {
     })
 
     if (teacherError) { setError(teacherError.message); setLoading(false); return }
-    router.push('/teacher/pending')
+    router.push(hasPriorInventory ? '/teacher/pending?hint=inventory' : '/teacher/pending')
   }
 
   const nextStep = () => {
@@ -424,6 +425,43 @@ export default function TeacherSetupPage() {
                   <p className="text-xs text-gray-400">{t('setup.rec_hint')}</p>
                 </div>
               )}
+
+              {/* Prior inventory */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('setup.prior_inventory_label')}
+                </label>
+                <p className="text-xs text-gray-400 mb-3">{t('setup.prior_inventory_hint')}</p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setHasPriorInventory(true)}
+                    className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                      hasPriorInventory === true
+                        ? 'border-forest-600 bg-forest-600 text-white'
+                        : 'border-gray-200 text-gray-600 hover:border-forest-300'
+                    }`}
+                  >
+                    {t('setup.prior_inventory_yes')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHasPriorInventory(false)}
+                    className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                      hasPriorInventory === false
+                        ? 'border-forest-600 bg-forest-600 text-white'
+                        : 'border-gray-200 text-gray-600 hover:border-forest-300'
+                    }`}
+                  >
+                    {t('setup.prior_inventory_no')}
+                  </button>
+                </div>
+                {hasPriorInventory === true && (
+                  <div className="mt-3 bg-forest-50 border border-forest-100 rounded-xl px-4 py-3 text-sm text-forest-700">
+                    {t('setup.prior_inventory_note')}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
