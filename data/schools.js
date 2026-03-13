@@ -5,17 +5,6 @@
  */
 export const schools = [
   {
-    id: 'wildav',
-    name: 'Robert E. Willett Elementary',
-    location: 'Davis, CA, USA',
-    country: 'USA',
-    coordinates: [-121.76607045199444, 38.55449079045209],
-    trees: 90,
-    logo: 'https://luforestal.github.io/SchoolTreeMap/logos/wildav.png',
-    pilot: true,
-    pilotYear: 2025,
-  },
-  {
     id: 'coocol',
     name: 'Cooley Ranch Elementary',
     location: 'Colton, CA, USA',
