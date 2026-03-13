@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import InventoryUpload from '@/components/InventoryUpload'
 import PhotoBatchUpload from '@/components/PhotoBatchUpload'
+import GpsKmlUpload from '@/components/GpsKmlUpload'
 import TeacherSettings from '@/components/TeacherSettings'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -38,14 +39,18 @@ function isExpired(dateStr) {
 }
 
 function InventoryPanel({ school, zones, onImportDone }) {
-  const [sub, setSub] = useState('data') // 'data' | 'photos'
+  const [sub, setSub] = useState('data') // 'data' | 'photos' | 'gps'
   return (
     <div className="space-y-4">
       {/* Sub-tab switcher */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button onClick={() => setSub('data')}
           className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'data' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
           📊 Import data (CSV / Excel)
+        </button>
+        <button onClick={() => setSub('gps')}
+          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'gps' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+          📍 Upload GPS (KML)
         </button>
         <button onClick={() => setSub('photos')}
           className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'photos' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
@@ -53,10 +58,9 @@ function InventoryPanel({ school, zones, onImportDone }) {
         </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm p-6">
-        {sub === 'data'
-          ? <InventoryUpload school={school} zones={zones} onImportDone={onImportDone} />
-          : <PhotoBatchUpload school={school} zones={zones} />
-        }
+        {sub === 'data' && <InventoryUpload school={school} zones={zones} onImportDone={onImportDone} />}
+        {sub === 'gps' && <GpsKmlUpload school={school} />}
+        {sub === 'photos' && <PhotoBatchUpload school={school} zones={zones} />}
       </div>
     </div>
   )
