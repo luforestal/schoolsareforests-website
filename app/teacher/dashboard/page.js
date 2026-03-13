@@ -349,6 +349,7 @@ export default function TeacherDashboard() {
     }
     return 'use'
   })
+  const [showProfile, setShowProfile] = useState(false)
 
   // Parse "lat, lng" string from Google Maps
   const parseCoords = (raw) => {
@@ -511,7 +512,6 @@ export default function TeacherDashboard() {
     { id: 'validation', label: 'Validation' },
     { id: 'manual', label: 'Add Trees' },
     { id: 'inventory', label: 'Upload Inventory' },
-    { id: 'profile', label: 'Profile' },
   ]
 
   return (
@@ -520,18 +520,24 @@ export default function TeacherDashboard() {
       <div className="bg-forest-800 text-white px-6 py-5">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {teacher?.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={teacher.photo_url} alt={teacher.name} className="w-11 h-11 rounded-full object-cover border-2 border-forest-600 shrink-0" />
-            ) : (
-              <div className="w-11 h-11 rounded-full bg-forest-600 flex items-center justify-center text-white font-bold text-lg shrink-0 select-none">
-                {(teacher?.name || '?')[0].toUpperCase()}
-              </div>
-            )}
+            <button onClick={() => setShowProfile(p => !p)}
+              className="relative shrink-0 group">
+              {teacher?.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={teacher.photo_url} alt={teacher.name} className="w-11 h-11 rounded-full object-cover border-2 border-forest-600 group-hover:border-white transition-colors" />
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-forest-600 flex items-center justify-center text-white font-bold text-lg select-none group-hover:bg-forest-500 transition-colors">
+                  {(teacher?.name || '?')[0].toUpperCase()}
+                </div>
+              )}
+            </button>
             <div>
               <p className="text-forest-300 text-xs uppercase tracking-wide mb-0.5">Teacher Dashboard</p>
               <h1 className="text-xl font-bold">{school?.name}</h1>
-              <p className="text-forest-300 text-sm">{teacher?.name}</p>
+              <button onClick={() => setShowProfile(p => !p)}
+                className="text-forest-300 hover:text-white text-sm transition-colors text-left">
+                {teacher?.name} <span className="text-forest-400 text-xs">· Edit profile</span>
+              </button>
             </div>
           </div>
           <button onClick={handleSignOut} className="text-forest-300 hover:text-white text-sm transition-colors">
@@ -575,6 +581,22 @@ export default function TeacherDashboard() {
             <div className="text-gray-400 text-xs mt-1">Validated</div>
           </div>
         </div>
+
+        {/* Profile panel */}
+        {showProfile && teacher && school && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Profile & Settings</h2>
+              <button onClick={() => setShowProfile(false)} className="text-gray-400 hover:text-gray-600 text-sm">✕ Close</button>
+            </div>
+            <TeacherSettings
+              teacher={teacher}
+              school={school}
+              isOwner={school.owner_id === teacher.id}
+              onUpdate={(updates) => setTeacher(t => ({ ...t, ...updates }))}
+            />
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-8 bg-white shadow-sm">
@@ -1261,15 +1283,6 @@ export default function TeacherDashboard() {
           <InventoryPanel school={school} zones={zones} onImportDone={() => { loadData(); setActiveTab('zones') }} />
         )}
 
-        {/* ── TAB: PROFILE ── */}
-        {activeTab === 'profile' && teacher && school && (
-          <TeacherSettings
-            teacher={teacher}
-            school={school}
-            isOwner={school.owner_id === teacher.id}
-            onUpdate={(updates) => setTeacher(t => ({ ...t, ...updates }))}
-          />
-        )}
 
       </div>
     </div>
