@@ -58,9 +58,9 @@ function InventoryPanel({ school, zones, onImportDone }) {
         </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm p-6">
-        {sub === 'data' && <InventoryUpload school={school} zones={zones} onImportDone={onImportDone} />}
-        {sub === 'gps' && <GpsKmlUpload school={school} />}
-        {sub === 'photos' && <PhotoBatchUpload school={school} zones={zones} />}
+        <div className={sub === 'data' ? '' : 'hidden'}><InventoryUpload school={school} zones={zones} onImportDone={onImportDone} /></div>
+        <div className={sub === 'gps' ? '' : 'hidden'}><GpsKmlUpload school={school} /></div>
+        <div className={sub === 'photos' ? '' : 'hidden'}><PhotoBatchUpload school={school} zones={zones} /></div>
       </div>
     </div>
   )
