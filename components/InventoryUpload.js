@@ -4,32 +4,38 @@ import { supabase } from '@/lib/supabase'
 
 // Fields we can import from the file
 const FIELDS = [
-  { key: 'original_id',       label: 'Tree ID / Número',          required: false },
-  { key: 'zone',              label: 'Zone / Zona',               required: false },
-  { key: 'species_common',    label: 'Species / Especie',         required: false },
-  { key: 'height_m',          label: 'Height (m) / Altura',       required: false },
-  { key: 'crown_ns_m',        label: 'Crown N-S (m) / Copa N-S',  required: false },
-  { key: 'crown_ew_m',        label: 'Crown E-W (m) / Copa E-O',  required: false },
-  { key: 'trunk_diameter_cm', label: 'Trunk (cm) / DAP',          required: false },
-  { key: 'health_status',     label: 'Health / Salud',            required: false },
-  { key: 'notes',             label: 'Notes / Notas',             required: false },
-  { key: 'lat',               label: 'Latitude / Latitud',        required: false },
-  { key: 'lng',               label: 'Longitude / Longitud',      required: false },
+  { key: 'original_id',       label: 'Tree ID / Número',                    required: false },
+  { key: 'zone',              label: 'Zone / Zona',                          required: false },
+  { key: 'species_common',    label: 'Common name / Nombre común',           required: false },
+  { key: 'species_scientific',label: 'Scientific name / Nombre científico',  required: false },
+  { key: 'genus',             label: 'Genus / Género  ➜ combines with epithet', required: false },
+  { key: 'species_epithet',   label: 'Species epithet / Epíteto  ➜ combines with genus', required: false },
+  { key: 'height_m',          label: 'Height (m) / Altura',                  required: false },
+  { key: 'crown_ns_m',        label: 'Crown N-S (m) / Copa N-S',             required: false },
+  { key: 'crown_ew_m',        label: 'Crown E-W (m) / Copa E-O',             required: false },
+  { key: 'trunk_diameter_cm', label: 'Trunk (cm) / DAP',                     required: false },
+  { key: 'health_status',     label: 'Health / Salud',                       required: false },
+  { key: 'notes',             label: 'Notes / Notas',                        required: false },
+  { key: 'lat',               label: 'Latitude / Latitud',                   required: false },
+  { key: 'lng',               label: 'Longitude / Longitud',                 required: false },
 ]
 
 // Common column name patterns (EN + ES) for auto-detection
 const AUTO_DETECT = {
-  original_id:       ['id', 'tree_id', 'numero', 'número', 'num', '#', 'arbol_id', 'tree id', 'no.'],
-  zone:              ['zone', 'zona', 'sector', 'area', 'área'],
-  species_common:    ['species', 'especie', 'common_name', 'nombre', 'nombre_comun', 'nombre_común', 'tree', 'arbol', 'árbol'],
-  height_m:          ['height', 'altura', 'alt', 'h_m', 'height_m', 'altura_m', 'h(m)', 'altura(m)', 'ht', 'alt(m)'],
-  crown_ns_m:        ['crown_ns', 'copa_ns', 'crown n-s', 'copa n-s', 'ns_m', 'crown_north', 'copa_norte'],
-  crown_ew_m:        ['crown_ew', 'copa_ew', 'crown e-w', 'copa e-o', 'ew_m', 'crown_east', 'copa_este'],
-  trunk_diameter_cm: ['trunk', 'dap', 'dbh', 'diameter', 'diametro', 'diámetro', 'trunk_cm', 'dap_cm', 'dbh_cm', 'tronco', 'circunferencia', 'circ'],
-  health_status:     ['health', 'salud', 'estado', 'condition', 'condicion', 'condición', 'health_status'],
-  notes:             ['notes', 'notas', 'remarks', 'comentarios', 'observaciones', 'obs'],
-  lat:               ['lat', 'latitude', 'latitud', 'y', 'coord_lat', 'lat_decimal'],
-  lng:               ['lng', 'lon', 'long', 'longitude', 'longitud', 'x', 'coord_lon', 'lon_decimal'],
+  original_id:        ['id', 'tree_id', 'numero', 'número', 'num', '#', 'arbol_id', 'tree id', 'no.'],
+  zone:               ['zone', 'zona', 'sector', 'area', 'área'],
+  species_common:     ['common_name', 'nombre_comun', 'nombre_común', 'nombre común', 'common name', 'nombre_vulgar', 'nombre vulgar', 'common'],
+  species_scientific: ['species', 'especie', 'scientific_name', 'nombre_cientifico', 'nombre_científico', 'nombre cientifico', 'nombre científico', 'scientific name', 'scientific', 'cientifico', 'científico', 'nombre_especie'],
+  genus:              ['genus', 'genero', 'género', 'gen'],
+  species_epithet:    ['epithet', 'epiteto', 'epíteto', 'specific_epithet', 'species_epithet', 'sp', 'spp'],
+  height_m:           ['height', 'altura', 'alt', 'h_m', 'height_m', 'altura_m', 'h(m)', 'altura(m)', 'ht', 'alt(m)'],
+  crown_ns_m:         ['crown_ns', 'copa_ns', 'crown n-s', 'copa n-s', 'ns_m', 'crown_north', 'copa_norte'],
+  crown_ew_m:         ['crown_ew', 'copa_ew', 'crown e-w', 'copa e-o', 'ew_m', 'crown_east', 'copa_este'],
+  trunk_diameter_cm:  ['trunk', 'dap', 'dbh', 'diameter', 'diametro', 'diámetro', 'trunk_cm', 'dap_cm', 'dbh_cm', 'tronco', 'circunferencia', 'circ'],
+  health_status:      ['health', 'salud', 'estado', 'condition', 'condicion', 'condición', 'health_status'],
+  notes:              ['notes', 'notas', 'remarks', 'comentarios', 'observaciones', 'obs'],
+  lat:                ['lat', 'latitude', 'latitud', 'y', 'coord_lat', 'lat_decimal'],
+  lng:                ['lng', 'lon', 'long', 'longitude', 'longitud', 'x', 'coord_lon', 'lon_decimal'],
 }
 
 function autoMap(headers) {
@@ -64,18 +70,29 @@ function applyMapping(row, mapping) {
     if (!col || col === '__skip__') return null
     return row[col] ?? null
   }
+  const str = (field) => { const v = get(field); return v ? String(v).trim() : null }
+
+  // Build species_scientific: prefer direct column; fallback to genus + epithet
+  let scientific = str('species_scientific')
+  if (!scientific) {
+    const g = str('genus'), e = str('species_epithet')
+    if (g && e) scientific = `${g} ${e}`
+    else if (g) scientific = g
+  }
+
   return {
-    original_id:       get('original_id') ? String(get('original_id')).trim() : null,
-    zone:              get('zone') ? String(get('zone')).trim() : null,
-    species_common:    get('species_common') ? String(get('species_common')).trim() : null,
-    height_m:          parseNum(get('height_m')),
-    crown_ns_m:        parseNum(get('crown_ns_m')),
-    crown_ew_m:        parseNum(get('crown_ew_m')),
-    trunk_diameter_cm: parseNum(get('trunk_diameter_cm')),
-    health_status:     parseHealth(get('health_status')),
-    notes:             get('notes') ? String(get('notes')).trim() : null,
-    lat:               parseNum(get('lat')),
-    lng:               parseNum(get('lng')),
+    original_id:        str('original_id'),
+    zone:               str('zone'),
+    species_common:     str('species_common'),
+    species_scientific: scientific,
+    height_m:           parseNum(get('height_m')),
+    crown_ns_m:         parseNum(get('crown_ns_m')),
+    crown_ew_m:         parseNum(get('crown_ew_m')),
+    trunk_diameter_cm:  parseNum(get('trunk_diameter_cm')),
+    health_status:      parseHealth(get('health_status')),
+    notes:              str('notes'),
+    lat:                parseNum(get('lat')),
+    lng:                parseNum(get('lng')),
   }
 }
 
@@ -117,7 +134,9 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
   }
 
   const preview = rawRows.slice(0, 8).map(r => applyMapping(r, mapping))
-  const mappedFields = FIELDS.filter(f => mapping[f.key] && mapping[f.key] !== '__skip__')
+  // genus + species_epithet are helper fields (combined into species_scientific); exclude from preview table
+  const HELPER_FIELDS = new Set(['genus', 'species_epithet'])
+  const mappedFields = FIELDS.filter(f => !HELPER_FIELDS.has(f.key) && mapping[f.key] && mapping[f.key] !== '__skip__')
 
   const zoneCol = mapping['zone']
   const hasZoneCol = zoneCol && zoneCol !== '__skip__'
@@ -183,6 +202,7 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
           zone_id: zoneId,
           original_id: mapped.original_id,
           species_common: mapped.species_common,
+          species_scientific: mapped.species_scientific,
           height_m: mapped.height_m,
           crown_ns_m: mapped.crown_ns_m,
           crown_ew_m: mapped.crown_ew_m,
