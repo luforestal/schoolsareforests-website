@@ -259,6 +259,10 @@
   "field": {
     "loading": "Loading…",
     "inventory": "Field Inventory",
+    "prior_inventory_title": "{{count}} trees from previous inventory",
+    "prior_inventory_hint": "These trees were recorded before. Tap one to see the reference data and re-survey it.",
+    "tap_to_resurvey": "Tap to re-survey →",
+    "species_unknown": "Unknown species",
     "select_zone": "Select your zone to start recording trees.",
     "no_zones": "No zones set up yet.",
     "no_zones_hint": "Ask your teacher to create zones first.",
@@ -546,6 +550,8 @@
   },
   "treeDetail": {
     "back": "← Back to zone",
+    "prior_inventory_badge": "Reference data from previous inventory",
+    "prior_inventory_hint": "These are the measurements from before. Use them as a reference, then take new photos and re-measure this tree.",
     "inaccessible_title": "⚠️ Inaccessible Tree",
     "tree_n": "Tree {{n}}",
     "zone_recorded": "Zone {{zone}} · Recorded by {{by}}",

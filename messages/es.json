@@ -259,6 +259,10 @@
   "field": {
     "loading": "Cargando…",
     "inventory": "Inventario de Campo",
+    "prior_inventory_title": "{{count}} árboles del inventario anterior",
+    "prior_inventory_hint": "Estos árboles fueron registrados antes. Toca uno para ver los datos de referencia y volver a medirlo.",
+    "tap_to_resurvey": "Toca para re-inventariar →",
+    "species_unknown": "Especie desconocida",
     "select_zone": "Selecciona tu zona para comenzar a registrar árboles.",
     "no_zones": "Aún no hay zonas configuradas.",
     "no_zones_hint": "Pide a tu profesor que cree las zonas primero.",
@@ -546,6 +550,8 @@
   },
   "treeDetail": {
     "back": "← Volver a la zona",
+    "prior_inventory_badge": "Datos de referencia del inventario anterior",
+    "prior_inventory_hint": "Estas son las medidas de antes. Úsalas como referencia, luego toma fotos nuevas y vuelve a medir este árbol.",
     "inaccessible_title": "⚠️ Árbol Inaccesible",
     "tree_n": "Árbol {{n}}",
     "zone_recorded": "Zona {{zone}} · Registrado por {{by}}",

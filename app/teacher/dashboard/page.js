@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import InventoryUpload from '@/components/InventoryUpload'
+import PhotoBatchUpload from '@/components/PhotoBatchUpload'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
@@ -33,6 +34,31 @@ function formatExpiry(dateStr) {
 function isExpired(dateStr) {
   if (!dateStr) return true
   return new Date(dateStr) < new Date()
+}
+
+function InventoryPanel({ school, zones, onImportDone }) {
+  const [sub, setSub] = useState('data') // 'data' | 'photos'
+  return (
+    <div className="space-y-4">
+      {/* Sub-tab switcher */}
+      <div className="flex gap-3">
+        <button onClick={() => setSub('data')}
+          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'data' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+          📊 Import data (CSV / Excel)
+        </button>
+        <button onClick={() => setSub('photos')}
+          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'photos' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+          📷 Upload photos (ZIP)
+        </button>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        {sub === 'data'
+          ? <InventoryUpload school={school} zones={zones} onImportDone={onImportDone} />
+          : <PhotoBatchUpload school={school} zones={zones} />
+        }
+      </div>
+    </div>
+  )
 }
 
 export default function TeacherDashboard() {
@@ -1220,13 +1246,7 @@ export default function TeacherDashboard() {
 
         {/* ── TAB: UPLOAD INVENTORY ── */}
         {activeTab === 'inventory' && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <InventoryUpload
-              school={school}
-              zones={zones}
-              onImportDone={() => { loadData(); setActiveTab('zones') }}
-            />
-          </div>
+          <InventoryPanel school={school} zones={zones} onImportDone={() => { loadData(); setActiveTab('zones') }} />
         )}
 
       </div>

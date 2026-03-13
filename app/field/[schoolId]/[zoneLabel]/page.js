@@ -252,8 +252,11 @@ export default function ZonePage() {
   }
 
   // ── Step 3: Tree inventory ──
-  const regularTrees = trees.filter(t => !t.inaccessible)
   const inaccessibleTrees = trees.filter(t => t.inaccessible)
+  // Prior inventory = imported by teacher, not yet re-surveyed by students this cycle
+  const priorTrees = trees.filter(t => !t.inaccessible && t.submitted_by === 'import')
+  const surveyedTrees = trees.filter(t => !t.inaccessible && t.submitted_by !== 'import')
+  const regularTrees = surveyedTrees // kept for compatibility
 
   return (
     <div className="min-h-screen bg-forest-50">
@@ -304,6 +307,47 @@ export default function ZonePage() {
           </div>
         )}
 
+        {/* Prior inventory — re-survey prompt */}
+        {priorTrees.length > 0 && (
+          <div className="mb-5">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+              <p className="text-blue-800 font-semibold text-sm">📋 {t('field.prior_inventory_title', { count: priorTrees.length })}</p>
+              <p className="text-blue-600 text-xs mt-0.5">{t('field.prior_inventory_hint')}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="grid grid-cols-[auto_1fr_auto] gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs font-semibold text-blue-400 uppercase tracking-wide">
+                <span>#</span>
+                <span>{t('field.species_col')}</span>
+                <span>{t('field.height_col')}</span>
+              </div>
+              {priorTrees.map((tree, i) => (
+                <button key={tree.id}
+                  onClick={() => router.push(`/field/${schoolId}/${zoneLabel}/${tree.id}`)}
+                  className={`w-full grid grid-cols-[auto_1fr_auto] gap-3 px-4 py-3 items-center text-left hover:bg-blue-50 active:bg-blue-100 transition-colors ${i < priorTrees.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                  {tree.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={tree.photo_url} alt="" className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-300 text-xl shrink-0">🌳</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-forest-800 truncate">
+                      {tree.species_common || t('field.species_unknown')}
+                    </p>
+                    <p className="text-xs text-blue-500 font-medium">{t('field.tap_to_resurvey')}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-gray-500">{tree.height_m ? `${tree.height_m}m` : '—'}</p>
+                    <span className="text-sm">
+                      {tree.health_status === 'good' ? '🟢' : tree.health_status === 'fair' ? '🟡' : tree.health_status === 'poor' ? '🔴' : '⬜'}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <button onClick={() => router.push(`/field/${schoolId}/${zoneLabel}/new`)}
           className="w-full bg-forest-700 text-white font-semibold py-4 rounded-xl hover:bg-forest-600 transition-colors mb-6 text-lg active:scale-[0.99]">
           🌳 {t('field.add_tree')}
@@ -316,9 +360,9 @@ export default function ZonePage() {
           </div>
         )}
 
-        {regularTrees.length > 0 && (
+        {surveyedTrees.length > 0 && (
           <div>
-            <p className="text-gray-500 text-sm font-medium mb-3">🌳 {regularTrees.length} {t('field.trees_recorded')}</p>
+            <p className="text-gray-500 text-sm font-medium mb-3">🌳 {surveyedTrees.length} {t('field.trees_recorded')}</p>
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="grid grid-cols-[2rem_1fr_3rem_3rem] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <span>#</span>
@@ -326,10 +370,10 @@ export default function ZonePage() {
                 <span className="text-center">{t('field.height_col')}</span>
                 <span className="text-center">{t('field.health_col')}</span>
               </div>
-              {regularTrees.map((tree, i) => (
+              {surveyedTrees.map((tree, i) => (
                 <button key={tree.id}
                   onClick={() => router.push(`/field/${schoolId}/${zoneLabel}/${tree.id}`)}
-                  className={`w-full grid grid-cols-[2rem_1fr_3rem_3rem] gap-2 px-4 py-3 items-center text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${i < regularTrees.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                  className={`w-full grid grid-cols-[2rem_1fr_3rem_3rem] gap-2 px-4 py-3 items-center text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${i < surveyedTrees.length - 1 ? 'border-b border-gray-50' : ''}`}>
                   <span className="text-xs font-bold text-forest-600">{i + 1}</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-forest-800 truncate">
