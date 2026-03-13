@@ -22,12 +22,12 @@ const FIELDS = [
 
 // Common column name patterns (EN + ES) for auto-detection
 const AUTO_DETECT = {
-  original_id:        ['id', 'tree_id', 'numero', 'número', 'num', '#', 'arbol_id', 'tree id', 'no.'],
+  original_id:        ['id', 'tree_id', 'treecode', 'tree_code', 'tree code', 'tree id', 'codigo', 'código', 'numero', 'número', 'num', '#', 'arbol_id', 'no.', 'tag', 'label'],
   zone:               ['zone', 'zona', 'sector', 'area', 'área'],
   species_common:     ['common_name', 'nombre_comun', 'nombre_común', 'nombre común', 'common name', 'nombre_vulgar', 'nombre vulgar', 'common'],
   species_scientific: ['species', 'especie', 'scientific_name', 'nombre_cientifico', 'nombre_científico', 'nombre cientifico', 'nombre científico', 'scientific name', 'scientific', 'cientifico', 'científico', 'nombre_especie'],
   genus:              ['genus', 'genero', 'género', 'gen'],
-  species_epithet:    ['epithet', 'epiteto', 'epíteto', 'specific_epithet', 'species_epithet', 'sp', 'spp'],
+  species_epithet:    ['epithet', 'epiteto', 'epíteto', 'specific_epithet', 'species_epithet', 'species', 'sp', 'spp'],
   height_m:           ['height', 'altura', 'alt', 'h_m', 'height_m', 'altura_m', 'h(m)', 'altura(m)', 'ht', 'alt(m)'],
   crown_ns_m:         ['crown_ns', 'copa_ns', 'crown n-s', 'copa n-s', 'ns_m', 'crown_north', 'copa_norte'],
   crown_ew_m:         ['crown_ew', 'copa_ew', 'crown e-w', 'copa e-o', 'ew_m', 'crown_east', 'copa_este'],
