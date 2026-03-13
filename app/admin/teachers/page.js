@@ -36,6 +36,14 @@ export default function AdminTeachersPage() {
       .from('teachers')
       .update({ status: 'approved', rejection_reason: null })
       .eq('id', teacher.id)
+    // Auto-assign owner if school has none
+    if (teacher.school_id) {
+      const { data: school } = await supabase
+        .from('schools').select('owner_id').eq('id', teacher.school_id).single()
+      if (school && !school.owner_id) {
+        await supabase.from('schools').update({ owner_id: teacher.id }).eq('id', teacher.school_id)
+      }
+    }
     await loadTeachers()
     setActionLoading('')
   }
@@ -47,6 +55,14 @@ export default function AdminTeachersPage() {
       .from('teachers')
       .update({ status: 'rejected', rejection_reason: rejectReason.trim() })
       .eq('id', teacher.id)
+    // Clear owner_id if this teacher was the owner
+    if (teacher.school_id) {
+      const { data: school } = await supabase
+        .from('schools').select('owner_id').eq('id', teacher.school_id).single()
+      if (school?.owner_id === teacher.id) {
+        await supabase.from('schools').update({ owner_id: null }).eq('id', teacher.school_id)
+      }
+    }
     setRejectingId(null)
     setRejectReason('')
     await loadTeachers()

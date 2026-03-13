@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import InventoryUpload from '@/components/InventoryUpload'
 import PhotoBatchUpload from '@/components/PhotoBatchUpload'
+import TeacherSettings from '@/components/TeacherSettings'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
@@ -510,6 +511,7 @@ export default function TeacherDashboard() {
     { id: 'validation', label: 'Validation' },
     { id: 'manual', label: 'Add Trees' },
     { id: 'inventory', label: 'Upload Inventory' },
+    { id: 'profile', label: 'Profile' },
   ]
 
   return (
@@ -517,10 +519,20 @@ export default function TeacherDashboard() {
       {/* Header */}
       <div className="bg-forest-800 text-white px-6 py-5">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <p className="text-forest-300 text-xs uppercase tracking-wide mb-0.5">Teacher Dashboard</p>
-            <h1 className="text-xl font-bold">{school?.name}</h1>
-            <p className="text-forest-300 text-sm">{teacher?.name}</p>
+          <div className="flex items-center gap-3">
+            {teacher?.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={teacher.photo_url} alt={teacher.name} className="w-11 h-11 rounded-full object-cover border-2 border-forest-600 shrink-0" />
+            ) : (
+              <div className="w-11 h-11 rounded-full bg-forest-600 flex items-center justify-center text-white font-bold text-lg shrink-0 select-none">
+                {(teacher?.name || '?')[0].toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p className="text-forest-300 text-xs uppercase tracking-wide mb-0.5">Teacher Dashboard</p>
+              <h1 className="text-xl font-bold">{school?.name}</h1>
+              <p className="text-forest-300 text-sm">{teacher?.name}</p>
+            </div>
           </div>
           <button onClick={handleSignOut} className="text-forest-300 hover:text-white text-sm transition-colors">
             Sign Out
@@ -1247,6 +1259,16 @@ export default function TeacherDashboard() {
         {/* ── TAB: UPLOAD INVENTORY ── */}
         {activeTab === 'inventory' && (
           <InventoryPanel school={school} zones={zones} onImportDone={() => { loadData(); setActiveTab('zones') }} />
+        )}
+
+        {/* ── TAB: PROFILE ── */}
+        {activeTab === 'profile' && teacher && school && (
+          <TeacherSettings
+            teacher={teacher}
+            school={school}
+            isOwner={school.owner_id === teacher.id}
+            onUpdate={(updates) => setTeacher(t => ({ ...t, ...updates }))}
+          />
         )}
 
       </div>

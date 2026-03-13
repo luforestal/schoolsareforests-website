@@ -46,6 +46,12 @@ export default function AdminSchoolsPage() {
 
   if (loading) return <p className="text-gray-400">Loading…</p>
 
+  const orphaned = schools.filter(s => {
+    if (!s.owner_id) return true
+    const owner = teachers.find(t => t.id === s.owner_id)
+    return !owner // owner_id set but teacher not in approved list
+  })
+
   return (
     <div>
       <div className="mb-6">
@@ -53,12 +59,25 @@ export default function AdminSchoolsPage() {
         <p className="text-gray-400 text-sm mt-1">View all schools and manage teacher assignments</p>
       </div>
 
+      {orphaned.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+          <p className="font-semibold text-amber-800 text-sm mb-1">⚠️ {orphaned.length} orphaned school{orphaned.length > 1 ? 's' : ''}</p>
+          <p className="text-amber-700 text-xs mb-2">These schools have no active owner. Their data is safe — assign a new owner by approving a teacher for that school or using Transfer Ownership below.</p>
+          <div className="flex flex-wrap gap-2">
+            {orphaned.map(s => (
+              <span key={s.id} className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">{s.name}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {schools.map(school => {
           const schoolTeachers = getTeachersForSchool(school.id)
           const owner = getOwner(school)
+          const isOrphaned = !owner && (school.owner_id ? true : schoolTeachers.length === 0)
           return (
-            <div key={school.id} className="bg-white rounded-xl border border-gray-100 p-5">
+            <div key={school.id} className={`bg-white rounded-xl border p-5 ${isOrphaned ? 'border-amber-200' : 'border-gray-100'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900">{school.name}</p>
