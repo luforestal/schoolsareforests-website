@@ -72,9 +72,9 @@ export default function FieldSchoolPage() {
       if (!schoolData) { setNotFound(true); setLoading(false); return }
       setSchool(schoolData)
 
-      // Load zones (filter if session restricts to certain zones)
+      // Load zones — only survey zones (no inventory_id), filter if session restricts
       let zonesQuery = supabase
-        .from('zones').select('*').eq('school_id', schoolId).order('label')
+        .from('zones').select('*').eq('school_id', schoolId).is('inventory_id', null).order('label')
 
       if (allowedZoneIds && allowedZoneIds.length > 0) {
         zonesQuery = zonesQuery.in('id', allowedZoneIds)

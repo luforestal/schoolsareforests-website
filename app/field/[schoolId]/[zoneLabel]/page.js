@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useT } from '@/lib/i18n'
@@ -12,6 +12,7 @@ export default function ZonePage() {
 
   const [zone, setZone] = useState(null)
   const [trees, setTrees] = useState([])
+  const [resurveyedIds, setResurveyed] = useState(new Set()) // original_tree_ids that have been resurveyed
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [started, setStarted] = useState(false)
@@ -29,19 +30,55 @@ export default function ZonePage() {
 
   const sessionKey = `saf_student_name_${zoneLabel}`
 
+  // Map refs — must be at top level (Rules of Hooks)
+  const mapContainerRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+
   useEffect(() => {
     const saved = sessionStorage.getItem(sessionKey)
     if (saved) { setName(saved); setStarted(true) }
 
     const load = async () => {
-      const { data: zoneData } = await supabase
-        .from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel).single()
+      // Prefer survey zone (no inventory_id); fall back to inventory zone
+      const { data: allMatchingZones } = await supabase
+        .from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
+      const zoneData = allMatchingZones?.find(z => !z.inventory_id) || allMatchingZones?.[0] || null
       setZone(zoneData)
 
       if (zoneData) {
+        let allTrees = []
+
+        // Trees in this zone
         const { data: treesData } = await supabase
           .from('trees').select('*').eq('zone_id', zoneData.id).order('id')
-        setTrees(treesData || [])
+        allTrees = treesData || []
+
+        // If this is a survey zone (no inventory), also load prior inventory trees
+        // from the inventory zone with the same label in the same school
+        if (!zoneData.inventory_id) {
+          const { data: inventoryZones } = await supabase
+            .from('zones').select('id')
+            .eq('school_id', schoolId)
+            .eq('label', zoneLabel)
+            .not('inventory_id', 'is', null)
+          if (inventoryZones?.length) {
+            const invZoneIds = inventoryZones.map(z => z.id)
+            const { data: priorData } = await supabase
+              .from('trees').select('*')
+              .in('zone_id', invZoneIds)
+              .eq('inaccessible', false)
+              .order('id')
+            if (priorData) allTrees = [...allTrees, ...priorData]
+          }
+          // Load which inventory trees have already been resurveyed (have original_tree_id)
+          const { data: resurveyed } = await supabase
+            .from('trees').select('original_tree_id')
+            .eq('school_id', schoolId)
+            .not('original_tree_id', 'is', null)
+          if (resurveyed) setResurveyed(new Set(resurveyed.map(r => r.original_tree_id)))
+        }
+
+        setTrees(allTrees)
 
         // Show zone photos step if no photos yet
         if (!zoneData.photo1_url || !zoneData.photo2_url) {
@@ -63,6 +100,59 @@ export default function ZonePage() {
     }
     load()
   }, [schoolId, zoneLabel])
+
+  // ── Inventory map — must be here (before any early returns) to obey Rules of Hooks ──
+  useEffect(() => {
+    const inventoryWithGps = trees.filter(t => t.inventory_id != null && !t.inaccessible && t.lat && t.lng)
+    const done = (t) => resurveyedIds.has(t.id)
+    if (!inventoryWithGps.length || !mapContainerRef.current) return
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'; link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+    import('leaflet').then(mod => {
+      const L = mod.default
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null }
+      if (mapContainerRef.current._leaflet_id) delete mapContainerRef.current._leaflet_id
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      })
+      const avgLat = inventoryWithGps.reduce((s, t) => s + t.lat, 0) / inventoryWithGps.length
+      const avgLng = inventoryWithGps.reduce((s, t) => s + t.lng, 0) / inventoryWithGps.length
+      const map = L.map(mapContainerRef.current).setView([avgLat, avgLng], 19)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri', maxZoom: 20,
+      }).addTo(map)
+      const pendingIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#60a5fa;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>',
+        iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -9],
+      })
+      const doneIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>',
+        iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -9],
+      })
+      inventoryWithGps.forEach(tree => {
+        const isDone = done(tree)
+        const label = tree.original_id || `#${tree.id}`
+        const species = tree.species_common || tree.species_scientific || 'Unknown'
+        const popup = isDone
+          ? `<b>${label}</b><br/>${species}<br/><span style="color:#16a34a;font-size:11px">✓ Remedido</span>`
+          : `<b>${label}</b><br/>${species}<br/><a href="/field/${schoolId}/${zoneLabel}/new?resurvey=${tree.id}" style="color:#2563eb;font-size:12px">Medir →</a>`
+        L.marker([tree.lat, tree.lng], { icon: isDone ? doneIcon : pendingIcon })
+          .addTo(map)
+          .bindPopup(popup)
+      })
+      mapInstanceRef.current = map
+    })
+    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null } }
+  }, [trees, schoolId, zoneLabel])
 
   const handleStart = () => {
     if (!name.trim()) return
@@ -254,9 +344,12 @@ export default function ZonePage() {
   // ── Step 3: Tree inventory ──
   const inaccessibleTrees = trees.filter(t => t.inaccessible)
   // Prior inventory = imported by teacher, not yet re-surveyed by students this cycle
-  const priorTrees = trees.filter(t => !t.inaccessible && t.submitted_by === 'import')
-  const surveyedTrees = trees.filter(t => !t.inaccessible && t.submitted_by !== 'import')
+  const priorTrees = trees.filter(t => !t.inaccessible && t.inventory_id != null && !resurveyedIds.has(t.id))
+  const surveyedTrees = trees.filter(t => !t.inaccessible && t.inventory_id == null)
   const regularTrees = surveyedTrees // kept for compatibility
+
+  const priorWithGps = priorTrees.filter(t => t.lat && t.lng)
+
 
   return (
     <div className="min-h-screen bg-forest-50">
@@ -307,44 +400,32 @@ export default function ZonePage() {
           </div>
         )}
 
-        {/* Prior inventory — re-survey prompt */}
+        {/* Prior inventory — map only, tap a tree to resurvey */}
         {priorTrees.length > 0 && (
           <div className="mb-5">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-              <p className="text-blue-800 font-semibold text-sm">📋 {t('field.prior_inventory_title', { count: priorTrees.length })}</p>
-              <p className="text-blue-600 text-xs mt-0.5">{t('field.prior_inventory_hint')}</p>
+              <p className="text-blue-800 font-semibold text-sm">📋 {priorTrees.length} trees from previous inventory</p>
+              <p className="text-blue-600 text-xs mt-0.5">Tap a tree on the map to resurvey it.</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="grid grid-cols-[auto_1fr_auto] gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs font-semibold text-blue-400 uppercase tracking-wide">
-                <span>#</span>
-                <span>{t('field.species_col')}</span>
-                <span>{t('field.height_col')}</span>
-              </div>
-              {priorTrees.map((tree, i) => (
-                <button key={tree.id}
-                  onClick={() => router.push(`/field/${schoolId}/${zoneLabel}/${tree.id}`)}
-                  className={`w-full grid grid-cols-[auto_1fr_auto] gap-3 px-4 py-3 items-center text-left hover:bg-blue-50 active:bg-blue-100 transition-colors ${i < priorTrees.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                  {tree.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={tree.photo_url} alt="" className="w-10 h-10 object-cover rounded-lg shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-300 text-xl shrink-0">🌳</div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-forest-800 truncate">
-                      {tree.species_common || t('field.species_unknown')}
-                    </p>
-                    <p className="text-xs text-blue-500 font-medium">{t('field.tap_to_resurvey')}</p>
+            {priorWithGps.length > 0 && (
+              <>
+                <div ref={mapContainerRef} className="w-full rounded-xl overflow-hidden border border-blue-200" style={{ height: '300px' }} />
+                <div className="flex items-center gap-4 mt-2 px-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-blue-400 border border-white shadow-sm" />
+                    <span className="text-xs text-gray-500">Por medir</span>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-gray-500">{tree.height_m ? `${tree.height_m}m` : '—'}</p>
-                    <span className="text-sm">
-                      {tree.health_status === 'good' ? '🟢' : tree.health_status === 'fair' ? '🟡' : tree.health_status === 'poor' ? '🔴' : '⬜'}
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-green-500 border border-white shadow-sm" />
+                    <span className="text-xs text-gray-500">Remedido</span>
                   </div>
-                </button>
-              ))}
-            </div>
+                  <span className="text-xs text-gray-400 ml-auto">{resurveyedIds.size}/{priorTrees.length + resurveyedIds.size} listos</span>
+                </div>
+              </>
+            )}
+            {priorTrees.length > priorWithGps.length && (
+              <p className="text-xs text-gray-400 text-center mt-2">{priorTrees.length - priorWithGps.length} árboles sin GPS — usa "+ Add Tree" para remedirlos</p>
+            )}
           </div>
         )}
 

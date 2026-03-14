@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import InventoryUpload from '@/components/InventoryUpload'
 import PhotoBatchUpload from '@/components/PhotoBatchUpload'
 import GpsKmlUpload from '@/components/GpsKmlUpload'
+import InventoryMap from '@/components/InventoryMap'
 import TeacherSettings from '@/components/TeacherSettings'
 
 const ZONE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -39,28 +40,67 @@ function isExpired(dateStr) {
 }
 
 function InventoryPanel({ school, zones, onImportDone }) {
-  const [sub, setSub] = useState('data') // 'data' | 'photos' | 'gps'
+  const [sub, setSub] = useState('data') // 'data' | 'gps' | 'photos' | 'map'
+  const [excelRows, setExcelRows] = useState([])
+  const [gpsMap, setGpsMap] = useState({})
+  const [done, setDone] = useState({ data: false, gps: false, photos: false })
+
+  useEffect(() => {
+    supabase.from('trees').select('inventory_id, lat, photo_url').eq('school_id', school.id)
+      .then(({ data }) => {
+        if (!data) return
+        setDone({
+          data: data.some(t => t.inventory_id != null),
+          gps: data.some(t => t.lat != null),
+          photos: data.some(t => t.photo_url != null),
+        })
+      })
+  }, [school.id])
+
+  const tabClass = (key) => {
+    const active = sub === key
+    const complete = done[key]
+    if (active) return 'bg-forest-700 text-white'
+    if (complete) return 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+    return 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+  }
+
+  const tabLabel = (key, emoji, label) => (
+    <button onClick={() => setSub(key)} className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${tabClass(key)}`}>
+      {emoji} {label}{done[key] && sub !== key ? ' ✓' : ''}
+    </button>
+  )
+
   return (
     <div className="space-y-4">
-      {/* Sub-tab switcher */}
       <div className="flex flex-wrap gap-3">
-        <button onClick={() => setSub('data')}
-          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'data' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
-          📊 Import data (CSV / Excel)
-        </button>
-        <button onClick={() => setSub('gps')}
-          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'gps' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
-          📍 Upload GPS (KML)
-        </button>
-        <button onClick={() => setSub('photos')}
-          className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'photos' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
-          📷 Upload photos (ZIP)
+        {tabLabel('data', '📊', 'Import data (CSV / Excel)')}
+        {tabLabel('gps', '📍', 'Upload GPS (KML)')}
+        {tabLabel('photos', '📷', 'Upload photos (ZIP)')}
+        <button onClick={() => setSub('map')} className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${sub === 'map' ? 'bg-forest-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+          🗺️ View map
         </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className={sub === 'data' ? '' : 'hidden'}><InventoryUpload school={school} zones={zones} onImportDone={onImportDone} /></div>
-        <div className={sub === 'gps' ? '' : 'hidden'}><GpsKmlUpload school={school} /></div>
-        <div className={sub === 'photos' ? '' : 'hidden'}><PhotoBatchUpload school={school} zones={zones} /></div>
+        <div className={sub === 'data' ? '' : 'hidden'}>
+          <InventoryUpload
+            school={school}
+            zones={zones}
+            onImportDone={() => { setDone(d => ({ ...d, data: true })); onImportDone() }}
+            onDataParsed={(rows) => setExcelRows(rows)}
+            gpsData={gpsMap}
+          />
+        </div>
+        <div className={sub === 'gps' ? '' : 'hidden'}>
+          <GpsKmlUpload
+            school={school}
+            zones={zones}
+            excelRows={excelRows}
+            onGpsDone={(map) => { setGpsMap(map); if (Object.keys(map).length > 0) setDone(d => ({ ...d, gps: true })) }}
+          />
+        </div>
+        <div className={sub === 'photos' ? '' : 'hidden'}><PhotoBatchUpload school={school} zones={zones} excelRows={excelRows} /></div>
+        {sub === 'map' && <InventoryMap school={school} zones={zones} />}
       </div>
     </div>
   )
@@ -118,7 +158,36 @@ export default function TeacherDashboard() {
   const [kmlError, setKmlError] = useState('')
   const [locationMapRef, setLocationMapRef] = useState(null)
 
+  // Close inventory tab state
+  const [inventoryTrees, setInventoryTrees] = useState([])
+  const [resurveyedOrigIds, setResurveyed] = useState(new Set())
+  const [fateEdits, setFateEdits] = useState({})
+  const [savingFates, setSavingFates] = useState(false)
+  const [closingInventory, setClosingInventory] = useState(false)
+
   useEffect(() => { loadData() }, [])
+
+  // Realtime: refresh tree counts when students add/update trees
+  useEffect(() => {
+    if (!school?.id) return
+    const channel = supabase.channel('teacher-trees')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trees', filter: `school_id=eq.${school.id}` },
+        () => {
+          supabase.from('trees').select('zone_id, inaccessible').eq('school_id', school.id)
+            .then(({ data }) => {
+              if (!data) return
+              const counts = {}, iCounts = {}
+              data.forEach(t => {
+                counts[t.zone_id] = (counts[t.zone_id] || 0) + 1
+                if (t.inaccessible) iCounts[t.zone_id] = (iCounts[t.zone_id] || 0) + 1
+              })
+              setTreeCounts(counts)
+              setInaccessibleCounts(iCounts)
+            })
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [school?.id])
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -156,7 +225,7 @@ export default function TeacherDashboard() {
 
     const { data: zonesData } = await supabase
       .from('zones')
-      .select('*')
+      .select('*, inventories(year)')
       .eq('school_id', teacherData.school_id)
       .order('label')
 
@@ -190,6 +259,21 @@ export default function TeacherDashboard() {
     })
     setValidationCounts(vCounts)
 
+    // Load inventory trees and resurveyed IDs for Close Inventory tab
+    const { data: invTrees } = await supabase
+      .from('trees')
+      .select('id, zone_id, original_id, species_common, species_scientific, height_m, fate, fate_note')
+      .eq('school_id', teacherData.school_id)
+      .not('inventory_id', 'is', null)
+      .eq('inaccessible', false)
+    setInventoryTrees(invTrees || [])
+
+    const { data: resurveyed } = await supabase
+      .from('trees').select('original_tree_id')
+      .eq('school_id', teacherData.school_id)
+      .not('original_tree_id', 'is', null)
+    setResurveyed(new Set((resurveyed || []).map(r => r.original_tree_id)))
+
     setLoading(false)
   }
 
@@ -210,7 +294,7 @@ export default function TeacherDashboard() {
   }
 
   const nextAvailableLetter = () => {
-    const used = zones.map(z => z.label)
+    const used = zones.filter(z => !z.inventory_id).map(z => z.label)
     return ZONE_LETTERS.find(l => !used.includes(l)) || ''
   }
 
@@ -452,13 +536,44 @@ export default function TeacherDashboard() {
     setLocationMapRef(map)
   }
 
+  const handleSaveFates = async () => {
+    const editsWithFate = Object.entries(fateEdits).filter(([, v]) => v.fate)
+    if (!editsWithFate.length) return
+    setSavingFates(true)
+    await Promise.all(
+      editsWithFate.map(([id, { fate, note }]) =>
+        supabase.from('trees').update({ fate, fate_note: note || null }).eq('id', id)
+      )
+    )
+    const { data } = await supabase
+      .from('trees')
+      .select('id, zone_id, original_id, species_common, species_scientific, height_m, fate, fate_note')
+      .eq('school_id', school.id)
+      .not('inventory_id', 'is', null)
+      .eq('inaccessible', false)
+    setInventoryTrees(data || [])
+    setFateEdits({})
+    setSavingFates(false)
+  }
+
+  const handleCloseInventory = async () => {
+    if (!confirm('Close the inventory? This marks the current survey cycle as complete.')) return
+    setClosingInventory(true)
+    const now = new Date().toISOString()
+    await supabase.from('schools').update({ inventory_closed_at: now }).eq('id', school.id)
+    setSchool(prev => ({ ...prev, inventory_closed_at: now }))
+    setClosingInventory(false)
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/teacher')
   }
 
   const totalValidations = Object.values(validationCounts).reduce((a, b) => a + b, 0)
-  const totalTrees = Object.values(treeCounts).reduce((a, b) => a + b, 0)
+  const surveyZones = zones.filter(z => !z.inventory_id)
+  const surveyZoneIds = new Set(surveyZones.map(z => z.id))
+  const totalTrees = Object.entries(treeCounts).filter(([id]) => surveyZoneIds.has(id)).reduce((a, [, b]) => a + b, 0)
 
   if (loading) return (
     <div className="min-h-screen bg-forest-50 flex items-center justify-center">
@@ -516,6 +631,7 @@ export default function TeacherDashboard() {
     { id: 'validation', label: 'Validation' },
     { id: 'manual', label: 'Add Trees' },
     { id: 'inventory', label: 'Upload Inventory' },
+    { id: 'close', label: 'Close Inventory' },
   ]
 
   return (
@@ -573,7 +689,7 @@ export default function TeacherDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <div className="text-2xl font-bold text-forest-700">{zones.length}</div>
+            <div className="text-2xl font-bold text-forest-700">{surveyZones.length}</div>
             <div className="text-gray-400 text-xs mt-1">Zones</div>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
@@ -684,7 +800,7 @@ export default function TeacherDashboard() {
                     <label className="block text-xs font-medium text-gray-500 mb-1">Zone Letter *</label>
                     <select value={newZoneLabel} onChange={e => setNewZoneLabel(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white" required>
-                      {ZONE_LETTERS.filter(l => !zones.map(z => z.label).includes(l)).map(l => (
+                      {ZONE_LETTERS.filter(l => !zones.filter(z => !z.inventory_id).map(z => z.label).includes(l)).map(l => (
                         <option key={l} value={l}>{l}</option>
                       ))}
                     </select>
@@ -723,96 +839,134 @@ export default function TeacherDashboard() {
               </form>
             )}
 
-            {/* Zone cards */}
-            {zones.length === 0 ? (
-              <div className="bg-white rounded-xl p-10 text-center shadow-sm text-gray-400 mb-8">
-                <div className="text-4xl mb-3">🗺️</div>
-                <p className="font-medium">No zones yet</p>
-                <p className="text-sm mt-1">Click "+ Add Zone" to create the first zone for your students</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4 mb-8">
-                {zones.map(zone => {
-                  const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
-                  const requiredValidations = Math.max(1, Math.ceil(accessibleCount / 10))
-                  const doneValidations = validationCounts[zone.id] || 0
-                  const validationComplete = accessibleCount === 0 || doneValidations >= requiredValidations
-                  return (
-                    <div key={zone.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                      <button onClick={() => router.push(`/teacher/zone/${zone.id}`)}
-                        className="w-full p-5 text-left hover:bg-forest-50 transition-colors">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-forest-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-                              {zone.label}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-forest-800">Zone {zone.label}</p>
-                                {zone.category && (
-                                  <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">{zone.category}</span>
-                                )}
-                              </div>
-                              {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
-                              {zone.group_number && <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>}
-                            </div>
+            {/* Zone cards — split into survey zones and inventory zones */}
+            {(() => {
+              const surveyZones = zones.filter(z => !z.inventory_id)
+              const inventoryZones = zones.filter(z => z.inventory_id)
+
+              const ZoneCard = ({ zone }) => {
+                const accessibleCount = (treeCounts[zone.id] || 0) - (inaccessibleCounts[zone.id] || 0)
+                const requiredValidations = Math.max(1, Math.ceil(accessibleCount / 10))
+                const doneValidations = validationCounts[zone.id] || 0
+                const validationComplete = accessibleCount === 0 || doneValidations >= requiredValidations
+                const isInventory = !!zone.inventory_id
+                return (
+                  <div key={zone.id} className={`rounded-xl shadow-sm overflow-hidden ${isInventory ? 'bg-blue-50 border border-blue-100' : 'bg-white'}`}>
+                    <button onClick={() => router.push(`/teacher/zone/${zone.id}`)}
+                      className={`w-full p-5 text-left transition-colors ${isInventory ? 'hover:bg-blue-100' : 'hover:bg-forest-50'}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-lg flex-shrink-0 ${isInventory ? 'bg-blue-400' : 'bg-forest-700'}`}>
+                            {zone.label}
                           </div>
-                          <span className="text-gray-300 text-xl flex-shrink-0">›</span>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-forest-800">Zone {zone.label}</p>
+                              {zone.inventories?.year && (
+                                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">📋 {zone.inventories.year}</span>
+                              )}
+                              {zone.category && (
+                                <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium">{zone.category}</span>
+                              )}
+                            </div>
+                            {zone.description && <p className="text-gray-400 text-xs mt-0.5">{zone.description}</p>}
+                            {zone.group_number && <p className="text-xs text-gray-500 mt-0.5">👥 Group {zone.group_number}</p>}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
-                          {(inaccessibleCounts[zone.id] || 0) > 0 && (
-                            <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                              ⚠️ {inaccessibleCounts[zone.id]} inaccessible
-                            </span>
-                          )}
-                          {accessibleCount > 0 && (
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${validationComplete ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                              {validationComplete ? '✓' : '⚠'} {doneValidations}/{requiredValidations} validated
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                      <div className="px-5 py-2.5 border-t border-gray-50 flex gap-3">
-                        <button onClick={() => startEditZone(zone)} className="text-xs font-semibold text-forest-700 hover:text-forest-600 transition-colors">Edit</button>
-                        <button onClick={() => deleteZone(zone)} className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                        <span className="text-gray-300 text-xl flex-shrink-0">›</span>
                       </div>
-                      {editingZone?.id === zone.id && (
-                        <form onSubmit={saveEditZone} className="px-5 pb-5 border-t border-forest-100 bg-forest-50">
-                          <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide pt-4 mb-3">Edit Zone {zone.label}</p>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                              <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400">
-                                <option value="">No category</option>
-                                {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
-                              <input type="text" value={editGroup} onChange={e => setEditGroup(e.target.value)}
-                                placeholder="e.g. 1 or Red team"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
-                            </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-sm text-gray-500">🌳 {treeCounts[zone.id] || 0} trees</span>
+                        {(inaccessibleCounts[zone.id] || 0) > 0 && (
+                          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            ⚠️ {inaccessibleCounts[zone.id]} inaccessible
+                          </span>
+                        )}
+                        {!isInventory && accessibleCount > 0 && (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${validationComplete ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                            {validationComplete ? '✓' : '⚠'} {doneValidations}/{requiredValidations} validated
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    <div className={`px-5 py-2.5 border-t flex gap-3 ${isInventory ? 'border-blue-100' : 'border-gray-50'}`}>
+                      <button onClick={() => startEditZone(zone)} className="text-xs font-semibold text-forest-700 hover:text-forest-600 transition-colors">Edit</button>
+                      <button onClick={() => deleteZone(zone)} className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                    </div>
+                    {editingZone?.id === zone.id && (
+                      <form onSubmit={saveEditZone} className="px-5 pb-5 border-t border-forest-100 bg-forest-50">
+                        <p className="text-xs font-semibold text-forest-600 uppercase tracking-wide pt-4 mb-3">Edit Zone {zone.label}</p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                            <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-400">
+                              <option value="">No category</option>
+                              {ZONE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
                           </div>
-                          <div className="mb-3">
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
-                            <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
-                              placeholder="e.g. North side near the gate"
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
+                            <input type="text" value={editGroup} onChange={e => setEditGroup(e.target.value)}
+                              placeholder="e.g. 1 or Red team"
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
                           </div>
-                          <div className="flex gap-2">
-                            <button type="submit" className="bg-forest-700 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-600 transition-colors">Save</button>
-                            <button type="button" onClick={() => setEditingZone(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-gray-600">Cancel</button>
-                          </div>
-                        </form>
-                      )}
+                        </div>
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                          <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                            placeholder="e.g. North side near the gate"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-400" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="submit" className="bg-forest-700 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-forest-600 transition-colors">Save</button>
+                          <button type="button" onClick={() => setEditingZone(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-gray-600">Cancel</button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <div className="mb-8 space-y-6">
+                  {/* 2026 survey zones */}
+                  {surveyZones.length === 0 ? (
+                    <div className="bg-white rounded-xl p-10 text-center shadow-sm text-gray-400">
+                      <div className="text-4xl mb-3">🗺️</div>
+                      <p className="font-medium">No survey zones yet</p>
+                      <p className="text-sm mt-1">Click "+ Add Zone" to create zones for this year's survey</p>
                     </div>
-                  )
-                })}
-              </div>
-            )}
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {surveyZones.map(zone => <ZoneCard key={zone.id} zone={zone} />)}
+                    </div>
+                  )}
+
+                  {/* Inventory zones — grouped by year */}
+                  {inventoryZones.length > 0 && (() => {
+                    const byYear = {}
+                    inventoryZones.forEach(z => {
+                      const yr = z.inventories?.year || 'Previous inventory'
+                      if (!byYear[yr]) byYear[yr] = []
+                      byYear[yr].push(z)
+                    })
+                    return Object.entries(byYear).sort((a, b) => b[0] - a[0]).map(([yr, zList]) => (
+                      <div key={yr}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="h-px flex-1 bg-blue-100" />
+                          <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">📋 {yr} Inventory</span>
+                          <div className="h-px flex-1 bg-blue-100" />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {zList.map(zone => <ZoneCard key={zone.id} zone={zone} />)}
+                        </div>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              )
+            })()}
 
             {/* Session panel — below zones */}
             <div className={`rounded-xl p-5 ${activeSession ? 'bg-forest-800 text-white' : 'bg-white shadow-sm border border-gray-100'}`}>
@@ -955,6 +1109,114 @@ export default function TeacherDashboard() {
             )}
           </div>
         )}
+        {/* ── TAB: CLOSE INVENTORY ── */}
+        {activeTab === 'close' && (() => {
+          const unresurveyed = inventoryTrees.filter(t => !resurveyedOrigIds.has(t.id) && !t.fate)
+          const accounted = inventoryTrees.filter(t => resurveyedOrigIds.has(t.id) || t.fate || fateEdits[t.id]?.fate)
+          const allAccountedFor = inventoryTrees.length > 0 && accounted.length === inventoryTrees.length
+          const byZone = {}
+          unresurveyed.forEach(t => {
+            const zone = zones.find(z => z.id === t.zone_id)
+            const key = zone?.label || '?'
+            if (!byZone[key]) byZone[key] = []
+            byZone[key].push(t)
+          })
+          return (
+            <div className="space-y-5">
+              {school?.inventory_closed_at ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+                  <div className="text-3xl mb-2">✅</div>
+                  <p className="font-bold text-green-800">Inventory closed</p>
+                  <p className="text-sm text-green-600 mt-1">Closed on {new Date(school.inventory_closed_at).toLocaleDateString()}</p>
+                </div>
+              ) : inventoryTrees.length === 0 ? (
+                <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm">
+                  <p className="text-4xl mb-3">📋</p>
+                  <p className="font-medium">No previous inventory</p>
+                  <p className="text-sm mt-1">Upload an inventory first in the Upload Inventory tab</p>
+                </div>
+              ) : (
+                <>
+                  {/* Progress summary */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="font-semibold text-forest-800">Inventory accounted for</p>
+                      <span className="text-sm font-bold text-forest-700">{accounted.length}/{inventoryTrees.length}</span>
+                    </div>
+                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${allAccountedFor ? 'bg-green-500' : 'bg-amber-400'}`}
+                        style={{ width: `${Math.round((accounted.length / inventoryTrees.length) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex gap-4 mt-3 text-xs text-gray-500 flex-wrap">
+                      <span>✅ {resurveyedOrigIds.size} resurveyed</span>
+                      <span>📝 {inventoryTrees.filter(t => t.fate).length} marked (cut/dead/missing)</span>
+                      <span>⏳ {inventoryTrees.length - accounted.length} pending</span>
+                    </div>
+                  </div>
+
+                  {/* Unresurveyed trees */}
+                  {unresurveyed.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">¿Qué pasó con estos árboles?</p>
+                      {Object.entries(byZone).sort().map(([label, trees]) => (
+                        <div key={label} className="mb-4">
+                          <p className="text-xs font-semibold text-forest-600 mb-2">Zona {label}</p>
+                          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                            {trees.map((tree, i) => {
+                              const edit = fateEdits[tree.id] || {}
+                              return (
+                                <div key={tree.id} className={`px-4 py-3 flex items-center gap-3 ${i < trees.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-forest-800 truncate">
+                                      {tree.original_id ? `#${tree.original_id}` : `Árbol ${tree.id}`}
+                                      {tree.species_common ? ` · ${tree.species_common}` : tree.species_scientific ? ` · ${tree.species_scientific}` : ''}
+                                    </p>
+                                    {tree.height_m && <p className="text-xs text-gray-400">{tree.height_m}m</p>}
+                                  </div>
+                                  <select
+                                    value={edit.fate || ''}
+                                    onChange={e => setFateEdits(f => ({ ...f, [tree.id]: { ...edit, fate: e.target.value } }))}
+                                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-forest-400 bg-white flex-shrink-0"
+                                  >
+                                    <option value="">¿Qué pasó?</option>
+                                    <option value="cut">🪓 Talado</option>
+                                    <option value="dead">💀 Muerto</option>
+                                    <option value="missing">❓ No encontrado</option>
+                                  </select>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {Object.values(fateEdits).some(v => v.fate) && (
+                        <button onClick={handleSaveFates} disabled={savingFates}
+                          className="w-full bg-forest-700 text-white font-semibold py-3 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50 mt-2">
+                          {savingFates ? 'Guardando…' : `Guardar (${Object.values(fateEdits).filter(v => v.fate).length} árboles)`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Close button */}
+                  {allAccountedFor && (
+                    <div className="bg-forest-50 border border-forest-200 rounded-xl p-5 text-center">
+                      <p className="font-semibold text-forest-800 mb-1">¡Todos los árboles están contabilizados!</p>
+                      <p className="text-sm text-gray-500 mb-4">Ya puedes cerrar el inventario y guardarlo como registro histórico.</p>
+                      <button onClick={handleCloseInventory} disabled={closingInventory}
+                        className="bg-forest-700 text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-600 transition-colors disabled:opacity-50">
+                        {closingInventory ? 'Cerrando…' : '✓ Cerrar inventario'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })()}
+
         {/* ── TAB: LOCATION ── */}
         {activeTab === 'location' && (
           <div className="space-y-6">

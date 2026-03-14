@@ -98,7 +98,7 @@ function applyMapping(row, mapping) {
 
 const BATCH_SIZE = 50
 
-export default function InventoryUpload({ school, zones, onImportDone }) {
+export default function InventoryUpload({ school, zones, onImportDone, onDataParsed, gpsData = {} }) {
   const [step, setStep] = useState('upload') // upload | map | preview | importing | done
   const [year, setYear] = useState(new Date().getFullYear() - 1)
   const [file, setFile] = useState(null)
@@ -118,16 +118,22 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
     setFile(f)
     setParseError('')
     try {
-      const XLSX = await import('xlsx')
+      const XLSXmod = await import('xlsx')
+      const XLSX = XLSXmod.default || XLSXmod
       const buf = await f.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       const ws = wb.Sheets[wb.SheetNames[0]]
       const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
       if (!data.length) { setParseError('The file appears to be empty.'); return }
       const hdrs = Object.keys(data[0])
+      const autoMapped = autoMap(hdrs)
       setHeaders(hdrs)
       setRawRows(data)
-      setMapping(autoMap(hdrs))
+      setMapping(autoMapped)
+      if (onDataParsed) {
+        const mappedRows = data.map(r => applyMapping(r, autoMapped))
+        onDataParsed(mappedRows)
+      }
     } catch {
       setParseError('Could not read this file. Please use .csv or .xlsx format.')
     }
@@ -150,25 +156,7 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
     setImportTotal(rawRows.length)
     setImportErrors([])
 
-    // Ensure needed zones exist
-    const zoneMap = {}
-    zones.forEach(z => { zoneMap[z.label.toUpperCase()] = z.id })
-
-    if (hasZoneCol) {
-      for (const label of fileZoneValues) {
-        const upper = label.toUpperCase()
-        if (!zoneMap[upper]) {
-          const { data: nz } = await supabase.from('zones').insert({
-            school_id: school.id,
-            label: upper.slice(0, 4),
-            description: `Imported zone ${label}`,
-          }).select().single()
-          if (nz) zoneMap[upper] = nz.id
-        }
-      }
-    }
-
-    // Find or create inventory record
+    // Find or create inventory record first (needed for zone linking)
     let inventoryId = null
     const { data: existingInv } = await supabase
       .from('inventories').select('id').eq('school_id', school.id).eq('year', year).single()
@@ -179,6 +167,28 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
         school_id: school.id, year, label: `Inventory ${year}`, status: 'closed',
       }).select().single()
       if (newInv) inventoryId = newInv.id
+    }
+
+    // Ensure needed zones exist, linked to this inventory
+    const zoneMap = {}
+    zones.forEach(z => { zoneMap[z.label.toUpperCase()] = z.id })
+
+    if (hasZoneCol && inventoryId) {
+      for (const label of fileZoneValues) {
+        const upper = label.toUpperCase()
+        if (!zoneMap[upper]) {
+          const { data: nz } = await supabase.from('zones').insert({
+            school_id: school.id,
+            label: upper.slice(0, 4),
+            description: `Imported zone ${label}`,
+            inventory_id: inventoryId,
+          }).select().single()
+          if (nz) zoneMap[upper] = nz.id
+        } else {
+          // Zone already exists — link it to this inventory
+          await supabase.from('zones').update({ inventory_id: inventoryId }).eq('id', zoneMap[upper])
+        }
+      }
     }
 
     let done = 0
@@ -197,6 +207,13 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
         }
         if (!zoneId) { errors.push(`Row ${i + j + 2}: no zone — skipped`); done++; continue }
 
+        let lat = mapped.lat
+        let lng = mapped.lng
+        if ((lat === null || lat === undefined) && (lng === null || lng === undefined) && mapped.original_id) {
+          const gpsEntry = gpsData[mapped.original_id]
+          if (gpsEntry) { lat = gpsEntry.lat; lng = gpsEntry.lng }
+        }
+
         toInsert.push({
           school_id: school.id,
           zone_id: zoneId,
@@ -206,14 +223,13 @@ export default function InventoryUpload({ school, zones, onImportDone }) {
           height_m: mapped.height_m,
           crown_ns_m: mapped.crown_ns_m,
           crown_ew_m: mapped.crown_ew_m,
-          trunk_diameter_cm: mapped.trunk_diameter_cm,
+          dbh_cm: mapped.trunk_diameter_cm,
           health_status: mapped.health_status,
           notes: mapped.notes,
-          lat: mapped.lat,
-          lng: mapped.lng,
+          lat,
+          lng,
           inaccessible: false,
           inventory_id: inventoryId,
-          submitted_by: 'import',
         })
       }
 

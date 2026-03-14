@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 
@@ -16,6 +16,9 @@ const PHOTO_LABELS = [
 export default function NewTreePage() {
   const { schoolId, zoneLabel } = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const resurveyTreeId = searchParams.get('resurvey') // tree id from prior inventory
+  const [priorTree, setPriorTree] = useState(null)
   const [zone, setZone] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -103,7 +106,18 @@ export default function NewTreePage() {
     }
 
     supabase.from('zones').select('*').eq('school_id', schoolId).eq('label', zoneLabel)
-      .single().then(({ data }) => setZone(data))
+      .is('inventory_id', null).single().then(({ data }) => setZone(data))
+
+    if (resurveyTreeId) {
+      supabase.from('trees').select('*').eq('id', resurveyTreeId).single()
+        .then(({ data }) => {
+          if (!data) return
+          setPriorTree(data)
+          if (data.species_common) setSpeciesCommon(data.species_common)
+          if (data.species_scientific) setSpeciesScientific(data.species_scientific)
+          if (data.species_common || data.species_scientific) setNeedsId(false)
+        })
+    }
 
     supabase.from('schools').select('location, country, lat, lng, perimeter_geojson').eq('id', schoolId)
       .single().then(async ({ data: school }) => {
@@ -209,6 +223,14 @@ export default function NewTreePage() {
       if (isMultistem && !activeStems[i].measureHeight) return `Please enter the measurement height for stem ${i + 1}.`
     }
     if (!health) return 'Please select the health status.'
+    // Resurvey validations — measurements shouldn't shrink
+    if (priorTree && !inaccessible) {
+      if (priorTree.height_m && computedHeightM < priorTree.height_m * 0.7)
+        return `Height (${computedHeightM?.toFixed(1)}m) seems too low — previous inventory recorded ${priorTree.height_m}m. Double-check your measurements.`
+      const stemDiam = toMetricDiam(parseFloat(activeStems[0]?.diameter))
+      if (priorTree.dbh_cm && stemDiam < priorTree.dbh_cm * 0.7)
+        return `Diameter (${stemDiam?.toFixed(1)}cm) seems too low — previous inventory recorded ${priorTree.dbh_cm}cm. Double-check your measurements.`
+    }
     return null
   }
 
@@ -232,9 +254,7 @@ export default function NewTreePage() {
       }
     }
 
-    const { data: treeData, error: treeErr } = await supabase.from('trees').insert({
-      school_id: schoolId,
-      zone_id: zone.id,
+    const treeFields = {
       recorded_by: recordedBy,
       species_common: (inaccessible || needsId) ? null : speciesCommon.trim(),
       species_scientific: (inaccessible || needsId) ? null : (speciesScientific.trim() || null),
@@ -253,7 +273,28 @@ export default function NewTreePage() {
       species_confidence: (!inaccessible && !needsId && selectedConfidence) ? selectedConfidence : null,
       lat: coords?.lat || null,
       lng: coords?.lng || null,
-    }).select().single()
+    }
+
+    let treeData, treeErr
+    if (resurveyTreeId) {
+      // Resurvey: insert NEW tree linked to original, in the survey zone
+      // Keep original GPS coords if student didn't capture new ones
+      const resurveyFields = { ...treeFields }
+      if (!coords) { delete resurveyFields.lat; delete resurveyFields.lng }
+      const { data, error } = await supabase.from('trees').insert({
+        school_id: schoolId,
+        zone_id: zone.id,
+        original_tree_id: resurveyTreeId,
+        ...resurveyFields,
+      }).select().single()
+      treeData = data; treeErr = error
+    } else {
+      // New tree: insert
+      const { data, error } = await supabase.from('trees').insert({
+        school_id: schoolId, zone_id: zone.id, ...treeFields,
+      }).select().single()
+      treeData = data; treeErr = error
+    }
 
     if (treeErr) { setError(treeErr.message); setSubmitting(false); return }
 
@@ -328,7 +369,7 @@ export default function NewTreePage() {
       <div className="bg-forest-800 text-white px-4 py-5">
         <div className="max-w-lg mx-auto">
           <button onClick={() => router.back()} className="text-forest-300 text-sm mb-2">← Back</button>
-          <h1 className="font-bold text-lg">New Tree — Zone {zoneLabel}</h1>
+          <h1 className="font-bold text-lg">{resurveyTreeId ? `Resurvey — Zone ${zoneLabel}` : `New Tree — Zone ${zoneLabel}`}</h1>
         </div>
       </div>
 
@@ -336,6 +377,46 @@ export default function NewTreePage() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">{error}</div>
+        )}
+
+        {/* Prior inventory panel */}
+        {priorTree && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="font-semibold text-blue-800 text-sm mb-1">📋 Previous inventory — {priorTree.original_id || `Tree #${priorTree.id}`}</p>
+            <p className="text-blue-500 text-xs mb-3">These are last year's measurements. Enter the new values below.</p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {(priorTree.species_common || priorTree.species_scientific) && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Species</p>
+                  <p className="font-medium text-gray-500">{priorTree.species_common || priorTree.species_scientific}</p>
+                </div>
+              )}
+              {priorTree.height_m && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Height</p>
+                  <p className="font-medium text-gray-500">{priorTree.height_m} m</p>
+                </div>
+              )}
+              {priorTree.dbh_cm && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Trunk diameter</p>
+                  <p className="font-medium text-gray-500">{priorTree.dbh_cm} cm</p>
+                </div>
+              )}
+              {(priorTree.crown_ns_m || priorTree.crown_ew_m) && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Crown</p>
+                  <p className="font-medium text-gray-500">{priorTree.crown_ns_m ?? '?'} × {priorTree.crown_ew_m ?? '?'} m</p>
+                </div>
+              )}
+              {priorTree.health_status && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Health</p>
+                  <p className="font-medium text-gray-500 capitalize">{priorTree.health_status}</p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Inaccessible toggle */}

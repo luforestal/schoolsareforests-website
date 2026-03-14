@@ -2,12 +2,23 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// Extract a number/id from a filename like "arbol_023.jpg" → "023", "T-5.jpg" → "5"
+// Normalize an ID for comparison: lowercase, trim, strip leading zeros
+function normalizeId(s) {
+  if (!s && s !== 0) return ''
+  return String(s).trim().toLowerCase().replace(/^0+/, '') || '0'
+}
+
+// Extract best ID from a filename for matching:
+// 1. Try zone-prefixed pattern: "A01.jpg" → "a01", "tree_A01.jpg" → "a01"
+// 2. Fall back to numeric only: "arbol_023.jpg" → "23", "photo-5.jpg" → "5"
 function extractId(filename) {
-  const name = filename.replace(/\.[^.]+$/, '') // remove extension
-  // Try to find a numeric part: "arbol_023" → "023", "T23" → "23", "tree-7" → "7"
-  const match = name.match(/(\d+)/)
-  return match ? match[1].replace(/^0+/, '') || '0' : null // strip leading zeros for matching
+  const name = filename.replace(/\.[^.]+$/, '').trim() // remove extension
+  // Try to find a zone-prefixed ID like A01, AB-03, B7 (letters + optional separator + digits)
+  const zoneMatch = name.match(/([A-Za-z]+)[-_]?(\d+)$/)
+  if (zoneMatch) return normalizeId(zoneMatch[1] + zoneMatch[2])
+  // Fall back: just the number
+  const numMatch = name.match(/(\d+)/)
+  return numMatch ? normalizeId(numMatch[1]) : null
 }
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif']
@@ -17,7 +28,7 @@ function isImage(filename) {
   return IMAGE_EXTENSIONS.includes(ext)
 }
 
-export default function PhotoBatchUpload({ school, zones }) {
+export default function PhotoBatchUpload({ school, zones, excelRows = [] }) {
   const [step, setStep] = useState('upload') // upload | match | uploading | done
   const [photos, setPhotos] = useState([]) // [{ name, blob, objectUrl, extractedId, matchedTreeId }]
   const [trees, setTrees] = useState([]) // all trees for this school
@@ -42,14 +53,18 @@ export default function PhotoBatchUpload({ school, zones }) {
     load()
   }, [school.id])
 
-  // Build a lookup: original_id → tree.id
+  // Build a lookup: normalizedId → tree.id  (DB trees take priority, then excelRows as fallback)
   const idToTreeId = {}
+  // Fallback: excelRows (pre-import) — map original_id → synthetic key so we can show a match label
+  // We store { type:'excel', original_id } instead of a real UUID
+  const idToExcelRow = {}
+  excelRows.forEach((r, idx) => {
+    if (r.original_id) idToExcelRow[normalizeId(r.original_id)] = r
+    idToExcelRow[String(idx + 1)] = idToExcelRow[String(idx + 1)] || r
+  })
+  // DB trees
   trees.forEach((t, idx) => {
-    if (t.original_id) {
-      const stripped = String(t.original_id).replace(/^0+/, '') || '0'
-      idToTreeId[stripped] = t.id
-    }
-    // Also map sequential index (1-based) for files without original_id
+    if (t.original_id) idToTreeId[normalizeId(t.original_id)] = t.id
     idToTreeId[String(idx + 1)] = idToTreeId[String(idx + 1)] || t.id
   })
 
@@ -69,7 +84,8 @@ export default function PhotoBatchUpload({ school, zones }) {
         const objectUrl = URL.createObjectURL(blob)
         const extractedId = extractId(filename)
         const matchedTreeId = extractedId ? (idToTreeId[extractedId] || '') : ''
-        extracted.push({ name: filename, path, blob, objectUrl, extractedId, matchedTreeId })
+        const matchedExcelRow = (!matchedTreeId && extractedId) ? (idToExcelRow[extractedId] || null) : null
+        extracted.push({ name: filename, path, blob, objectUrl, extractedId, matchedTreeId, matchedExcelRow })
       }
 
       if (!extracted.length) { setZipError('No image files found in this ZIP.'); return }
@@ -80,7 +96,7 @@ export default function PhotoBatchUpload({ school, zones }) {
     }
   }
 
-  const matchedCount = photos.filter(p => p.matchedTreeId).length
+  const matchedCount = photos.filter(p => p.matchedTreeId || p.matchedExcelRow).length
   const unmatchedCount = photos.length - matchedCount
 
   const handleUpload = async () => {
@@ -141,12 +157,24 @@ export default function PhotoBatchUpload({ school, zones }) {
         </p>
       </div>
 
-      <div className="bg-forest-50 border border-forest-100 rounded-xl p-4 text-sm text-forest-700">
-        <p className="font-semibold mb-1">{trees.length} trees loaded</p>
-        <p className="text-xs text-forest-600">
-          {trees.filter(t => t.original_id).length} have a Tree ID from the inventory · {trees.filter(t => t.photo_url).length} already have a photo
-        </p>
-      </div>
+      {excelRows.length > 0 ? (
+        <div className="bg-forest-50 border border-forest-200 rounded-xl p-4 text-sm text-forest-700">
+          <p className="font-semibold mb-0.5">✓ Excel ready — {excelRows.length} rows loaded</p>
+          <p className="text-xs text-forest-600">Photos will be linked when you import the Excel data.</p>
+        </div>
+      ) : trees.length > 0 ? (
+        <div className="bg-forest-50 border border-forest-100 rounded-xl p-4 text-sm text-forest-700">
+          <p className="font-semibold mb-1">{trees.length} trees loaded from database</p>
+          <p className="text-xs text-forest-600">
+            {trees.filter(t => t.original_id).length} have a Tree ID · {trees.filter(t => t.photo_url).length} already have a photo
+          </p>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          <p className="font-semibold mb-1">⚠ First load your Excel file</p>
+          <p>Go to <strong>📊 Import data</strong> tab and upload your CSV/Excel first.</p>
+        </div>
+      )}
 
       <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 rounded-xl py-10 cursor-pointer hover:border-forest-400 hover:bg-forest-50 transition-colors"
         onDrop={e => { e.preventDefault(); handleZip(e.dataTransfer.files[0]) }}
@@ -172,6 +200,48 @@ export default function PhotoBatchUpload({ school, zones }) {
   )
 
   // ── MATCH ──
+  // When working against Excel (no DB trees yet), show a simpler confirmation UI
+  const excelOnlyMode = excelRows.length > 0 && trees.length === 0
+
+  if (step === 'match' && excelOnlyMode) return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold text-forest-800 mb-1">Photos Ready</h2>
+        <p className="text-sm text-gray-500">{matchedCount} of {photos.length} photos matched to trees.</p>
+      </div>
+
+      <div className="bg-forest-50 border border-forest-200 rounded-xl p-4 text-sm text-forest-700">
+        <p className="font-semibold mb-1">Next step: Import your Excel data</p>
+        <p className="text-xs text-forest-600">
+          Go to <strong>📊 Import data</strong> and click <strong>Import</strong>.
+          Once the trees are saved, come back here — the photos will match to real tree records and you can upload them.
+        </p>
+      </div>
+
+      {/* Compact matched list */}
+      <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+        {photos.map((photo, i) => {
+          const isMatched = photo.matchedExcelRow || photo.matchedTreeId
+          return (
+            <div key={i} className={`flex items-center gap-3 bg-white rounded-xl px-3 py-2 border ${isMatched ? 'border-green-100' : 'border-amber-100'}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.objectUrl} alt={photo.name} className="w-10 h-10 object-cover rounded-lg shrink-0 bg-gray-100" />
+              <p className="text-xs font-medium text-gray-600 flex-1 truncate">{photo.name}</p>
+              {isMatched
+                ? <span className="text-xs text-green-600 font-semibold shrink-0">✓ {photo.matchedExcelRow?.original_id || photo.extractedId}</span>
+                : <span className="text-xs text-amber-500 shrink-0">? unmatched</span>}
+            </div>
+          )
+        })}
+      </div>
+
+      <button onClick={() => setStep('upload')}
+        className="w-full border border-gray-200 text-gray-500 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors">
+        ← Back
+      </button>
+    </div>
+  )
+
   if (step === 'match') return (
     <div className="space-y-6">
       <div>
@@ -184,13 +254,9 @@ export default function PhotoBatchUpload({ school, zones }) {
 
       <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
         {photos.map((photo, i) => {
-          const zone = photo.matchedTreeId
-            ? zones.find(z => z.id === trees.find(t => t.id === photo.matchedTreeId)?.zone_id)
-            : null
-          const matchedTree = photo.matchedTreeId ? trees.find(t => t.id === photo.matchedTreeId) : null
-
+          const isMatched = photo.matchedTreeId || photo.matchedExcelRow
           return (
-            <div key={i} className={`flex items-center gap-3 bg-white rounded-xl p-3 border ${photo.matchedTreeId ? 'border-green-200' : 'border-amber-200'}`}>
+            <div key={i} className={`flex items-center gap-3 bg-white rounded-xl p-3 border ${isMatched ? 'border-green-200' : 'border-amber-200'}`}>
               {/* Thumbnail */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photo.objectUrl} alt={photo.name}
@@ -200,7 +266,9 @@ export default function PhotoBatchUpload({ school, zones }) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-600 truncate">{photo.name}</p>
                 {photo.extractedId && (
-                  <p className="text-xs text-gray-400">ID detected: <span className="font-mono">{photo.extractedId}</span></p>
+                  <p className="text-xs text-gray-400">
+                    ID: <span className="font-mono">{photo.extractedId}</span>
+                  </p>
                 )}
 
                 {/* Tree selector */}
@@ -222,8 +290,8 @@ export default function PhotoBatchUpload({ school, zones }) {
               </div>
 
               {/* Status badge */}
-              <span className={`text-xs font-bold shrink-0 ${photo.matchedTreeId ? 'text-green-600' : 'text-amber-500'}`}>
-                {photo.matchedTreeId ? '✓' : '?'}
+              <span className={`text-xs font-bold shrink-0 ${isMatched ? 'text-green-600' : 'text-amber-500'}`}>
+                {isMatched ? '✓' : '?'}
               </span>
             </div>
           )

@@ -50,14 +50,16 @@ export default function TreeDetailPage() {
         .from('trees').select('*').eq('id', treeId).single()
       if (!treeData) { router.back(); return }
       setTree(treeData)
-      setEditCommon(treeData.species_common || '')
-      setEditScientific(treeData.species_scientific || '')
-      setEditClinoDistance(treeData.clinometer_distance_m?.toString() || '')
-      setEditMeasurerHeight(treeData.measurer_eye_height_m?.toString() || '')
-      setEditClinoAngle(treeData.clinometer_angle_deg?.toString() || '')
-      setEditCrownNS(treeData.crown_ns_m?.toString() || '')
-      setEditCrownEW(treeData.crown_ew_m?.toString() || '')
-      setEditHealth(treeData.health_status || '')
+      // If this is a prior inventory tree (not yet resurveyed), start fields empty
+      const isResurveying = treeData.inventory_id != null && !treeData.recorded_by
+      setEditCommon(isResurveying ? '' : (treeData.species_common || ''))
+      setEditScientific(isResurveying ? '' : (treeData.species_scientific || ''))
+      setEditClinoDistance(isResurveying ? '' : (treeData.clinometer_distance_m?.toString() || ''))
+      setEditMeasurerHeight(isResurveying ? '' : (treeData.measurer_eye_height_m?.toString() || ''))
+      setEditClinoAngle(isResurveying ? '' : (treeData.clinometer_angle_deg?.toString() || ''))
+      setEditCrownNS(isResurveying ? '' : (treeData.crown_ns_m?.toString() || ''))
+      setEditCrownEW(isResurveying ? '' : (treeData.crown_ew_m?.toString() || ''))
+      setEditHealth(isResurveying ? '' : (treeData.health_status || ''))
 
       const { data: stemsData } = await supabase
         .from('tree_stems').select('*').eq('tree_id', treeId).order('stem_number')
@@ -93,6 +95,10 @@ export default function TreeDetailPage() {
 
   const handleSaveMeasurements = async () => {
     setSaving(true)
+    const isResurveying = tree.inventory_id != null && !tree.recorded_by
+    const studentName = isResurveying
+      ? (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`saf_student_name_${zoneLabel}`) : null)
+      : null
     await supabase.from('trees').update({
       clinometer_distance_m: parseFloat(editClinoDistance) || null,
       measurer_eye_height_m: parseFloat(editMeasurerHeight) || null,
@@ -101,6 +107,7 @@ export default function TreeDetailPage() {
       crown_ns_m: parseFloat(editCrownNS) || null,
       crown_ew_m: parseFloat(editCrownEW) || null,
       health_status: editHealth || null,
+      ...(studentName ? { recorded_by: studentName } : {}),
     }).eq('id', treeId)
 
     // Update stems
@@ -159,34 +166,46 @@ export default function TreeDetailPage() {
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
 
-        {/* Prior inventory banner */}
-        {tree.submitted_by === 'import' && (
+        {/* Prior inventory banner — shown when resurveying */}
+        {tree.inventory_id != null && !tree.recorded_by && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="font-semibold text-blue-800 text-sm mb-1">
-              📋 {t('treeDetail.prior_inventory_badge')}
-            </p>
-            <p className="text-blue-600 text-xs leading-relaxed">
-              {t('treeDetail.prior_inventory_hint')}
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <p className="font-semibold text-blue-800 text-sm mb-0.5">📋 Previous inventory data</p>
+            <p className="text-blue-500 text-xs mb-3">Measure this tree and enter new values below. These are last year's numbers for reference.</p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {(tree.species_common || tree.species_scientific) && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Species</p>
+                  <p className="font-medium text-gray-500">{tree.species_common || tree.species_scientific}</p>
+                </div>
+              )}
               {tree.height_m && (
-                <div className="bg-white rounded-lg py-2 px-1">
-                  <p className="text-xs text-blue-400">Height</p>
-                  <p className="font-bold text-blue-700 text-sm">{tree.height_m}m</p>
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Height</p>
+                  <p className="font-medium text-gray-500">{tree.height_m} m</p>
+                </div>
+              )}
+              {tree.dbh_cm && (
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Trunk diameter</p>
+                  <p className="font-medium text-gray-500">{tree.dbh_cm} cm</p>
                 </div>
               )}
               {(tree.crown_ns_m || tree.crown_ew_m) && (
-                <div className="bg-white rounded-lg py-2 px-1">
-                  <p className="text-xs text-blue-400">Crown</p>
-                  <p className="font-bold text-blue-700 text-sm">
-                    {tree.crown_ns_m ?? '?'} × {tree.crown_ew_m ?? '?'}m
-                  </p>
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Crown</p>
+                  <p className="font-medium text-gray-500">{tree.crown_ns_m ?? '?'} × {tree.crown_ew_m ?? '?'} m</p>
                 </div>
               )}
               {tree.health_status && (
-                <div className="bg-white rounded-lg py-2 px-1">
-                  <p className="text-xs text-blue-400">Health</p>
-                  <p className="font-bold text-blue-700 text-sm capitalize">{tree.health_status}</p>
+                <div className="bg-white rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Health</p>
+                  <p className="font-medium text-gray-500 capitalize">{tree.health_status}</p>
+                </div>
+              )}
+              {tree.notes && (
+                <div className="bg-white rounded-lg px-3 py-2 col-span-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Notes</p>
+                  <p className="font-medium text-gray-500 text-xs">{tree.notes}</p>
                 </div>
               )}
             </div>
