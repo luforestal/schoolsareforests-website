@@ -152,7 +152,7 @@ export default function ZonePage() {
       mapInstanceRef.current = map
     })
     return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null } }
-  }, [trees, schoolId, zoneLabel])
+  }, [trees, resurveyedIds, schoolId, zoneLabel, started, showZonePhotos])
 
   const handleStart = () => {
     if (!name.trim()) return
